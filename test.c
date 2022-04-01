@@ -2,5 +2,6 @@
 #include <stdlib.h>
 int main(){
     printf("hola muchachada");
-return 0;
+    printf("Esto lo hizo facu");
+    return 0;
 }
