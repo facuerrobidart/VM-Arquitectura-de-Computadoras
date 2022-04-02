@@ -17,9 +17,14 @@ const char *oneOp[] = {
     "ldh","rnd","not"};
 const char *noOp[] = {"stop"};
 
+typedef struct Toperando {
+    int tipo; //0=inmediato, 1=de registro, 2=directo
+    int valor;
+} Toperando;
+
 int main(int argc, char *argv[])
 {
-    printf("%d", parserNumeros("‘A"));
+    printf("%8X", parserNumeros("@-2"));
     return 0;
 }
 
@@ -50,6 +55,14 @@ void leerArchivo(int instructtiones[]){
     } else {
         printf("[ERROR] El archivo no existe");
     }
+}
+
+
+/*validamos que los registros de operadores de registro
+ tengan un nombre valido*/
+int validaRegistro(char reg[]){
+    return (strlen(reg) == 3 && reg[0] == 'e' && reg[1]>='a' && reg[1]<='e' && reg[2] == 'x')
+    || (strlen(reg) == 2 && reg[0]>='a' && reg[0]<='e' && (reg[1] == 'h' || reg[1] =='l' || reg[1] =='x'));
 }
 
 /*Esta funcion traduce los mnemonicos de char a binario
@@ -85,6 +98,7 @@ int traduceMnemonico(char instruccion[]){
     return 0xFFFFFFFF; // mnemonico inexistente
 }
 
+
 int traduceOperando(int codOp, char operando1[], char operando2[]){
     /*if (codOp & 0xF0000000 != 0xF0000000) { //operador con dos operandos
 
@@ -96,21 +110,59 @@ int traduceOperando(int codOp, char operando1[], char operando2[]){
 }
 
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
-int convierteOperando(char operando[]){
+Toperando convierteOperando(char operando[]){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
+    Toperando resultado;
+
     if (operando[0] == '[') { //OPERADOR DIRECTO
-        char aux[];
+        char aux[strlen(operando)-2];
         int k = 0;
         for(size_t i=1; i < strlen(aux) - 1; i++){ //recorremos entre corchetes
             aux[k] = operando[i];
-            k++
+            k++;
         }
-        return parserNumeros(aux);
+        resultado.tipo=2;
+        resultado.valor=parserNumeros(aux);
+    } else if ((65<=operando[0] && operando[0]<=90) || (97<=operando[0] && operando[0]<=122)) { //OPERADOR DE REGISTRO
+        resultado.tipo = 1;
+
+        char aux[strlen(operando)];
+        strcpy(aux,operando);
+
+        for(size_t l=0; l<strlen(aux); l++){
+            aux[l] = aux[l] | 0x20; // convierto a minusculas caracter a caracter
+        }
+
+        if (!validaRegistro(aux)){
+                printf("[WARNING] REGISTRO INVALIDO");
+        }
+
+        if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
+            char local[3] = "%";
+            strcat(local, aux[1]);
+
+            resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
+        } else {
+            char local[3] = "%";
+            strcat(local, aux[0]); //el registro se referencia con el primer caracter si no es extendido
+            if (aux[1] == 'x') {
+                resultado.valor = (parserNumeros(local) & 0b111111);
+            } else if (aux[1] == 'l') {
+                resultado.valor = (parserNumeros(local) & 0b011111);
+            } else {
+                resultado.valor = (parserNumeros(local) & 0b101111);
+            }
+        }
+    } else { //OPERADOR INMEDIATO
+        resultado.tipo = 0;
+        resultado.valor = parserNumeros(aux);
     }
+
+    return resultado; //devuelve valor del operando y su tipo
 }
 
+/* la idea es recibir un número en formato string
+y convertirlo a decimal int basados en la especificación de la MV */
 int parserNumeros(char num[]){
-    /* la idea es recibir un número en formato string
-    y convertirlo a decimal int basados en la especificación de la MV */
     char aux[100];
     int k = 0;
     if (num[0] == '@'){ //OCTAL
@@ -145,13 +197,11 @@ int calculaCS (char nombreArchivo[]){
     FILE * arch = fopen(nombreArchivo, "r+");
     char linea[200];
     int longitudCS = 0;
-    /*parsed[0] = rotulo, parsed[1] mnemonico SIEMPRE != NULL si no se ignora, parsed[2] y [3] operandos, parsed[4] comment*/
     if (arch != NULL) {
         while (fgets(linea,sizeof linea, arch)!=NULL){
             char **parsed = parseline(linea);
             if (parsed[1]) {
-                instruccion = instruccion | traduceMnemonico(parsed[1]);
-                cs++;
+                longitudCS++;
             }
         }
         fclose(arch);

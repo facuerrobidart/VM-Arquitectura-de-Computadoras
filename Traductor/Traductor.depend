@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1648919532 source:c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\main.c
+1648925150 source:c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\main.c
 	<stdio.h>
 	<stdlib.h>
 	"string.h"
