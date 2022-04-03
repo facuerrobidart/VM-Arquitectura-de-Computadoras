@@ -5,7 +5,7 @@
 #include <ctype.h>
 
 /*DICCIONARIO DE MNEMONICOS: Son arrays que contienen los mnemonicos
-ordenados según su código (respecto a la tabla de la especificación).
+ordenados segÃºn su cÃ³digo (respecto a la tabla de la especificaciÃ³n).
 Estan separados por su cantidad de operandos.*/
 const char *twoOp[] = {
     "mov","add","sub",
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-/*ATENCIÓN: C maneja los int automáticamente,
+/*ATENCIÃ“N: C maneja los int automÃ¡ticamente,
 solamente hay que tener cuidado de poner el formato
 adecuado cuando se hace printf y scanf*/
 
@@ -47,7 +47,7 @@ void leerArchivo(int instructtiones[]){
                 if (!parsed[2] && !parsed[3] && parsed[4]){
                     printf(parsed[4]);
                 } else {
-                    printf("[ERROR] Operandos presentes en una línea sin instrucción");
+                    printf("[ERROR] Operandos presentes en una lÃ­nea sin instrucciÃ³n");
                 }
             }
         }
@@ -61,14 +61,14 @@ void leerArchivo(int instructtiones[]){
 /*validamos que los registros de operadores de registro
  tengan un nombre valido*/
 int validaRegistro(char reg[]){
-    return (strlen(reg) == 3 && reg[0] == 'e' && reg[1]>='a' && reg[1]<='e' && reg[2] == 'x')
-    || (strlen(reg) == 2 && reg[0]>='a' && reg[0]<='e' && (reg[1] == 'h' || reg[1] =='l' || reg[1] =='x'));
+    return (strlen(reg) == 3 && reg[0] == 'e' && reg[1]>='a' && reg[1]<='f' && reg[2] == 'x')
+    || (strlen(reg) == 2 && reg[0]>='a' && reg[0]<='f' && (reg[1] == 'h' || reg[1] =='l' || reg[1] =='x'));
 }
 
 /*Esta funcion traduce los mnemonicos de char a binario
 Recibe un mnemonico y compara contra la lista de mnemonicos
 definida en las constantes.
-Los índices de estas listas se corresponden con el código
+Los Ã­ndices de estas listas se corresponden con el cÃ³digo
 de cada mnemonico especificado en la tabla*/
 
 int traduceMnemonico(char instruccion[]){
@@ -122,7 +122,7 @@ Toperando convierteOperando(char operando[]){ //LOS OPERANDOS SE CONVIERTEN DE U
         }
         resultado.tipo=2;
         resultado.valor=parserNumeros(aux);
-    } else if ((65<=operando[0] && operando[0]<=90) || (97<=operando[0] && operando[0]<=122)) { //OPERADOR DE REGISTRO
+    } else if (('a'<=operando[0] && operando[0]<='f') || ('A'<=operando[0] && operando[0]<='F')) { //OPERADOR DE REGISTRO
         resultado.tipo = 1;
 
         char aux[strlen(operando)];
@@ -140,16 +140,16 @@ Toperando convierteOperando(char operando[]){ //LOS OPERANDOS SE CONVIERTEN DE U
             char local[3] = "%";
             strcat(local, aux[1]);
 
-            resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
+            resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos seÃ±alan el subregistro seleccionado
         } else {
             char local[3] = "%";
             strcat(local, aux[0]); //el registro se referencia con el primer caracter si no es extendido
             if (aux[1] == 'x') {
-                resultado.valor = (parserNumeros(local) & 0b111111);
+                resultado.valor = (parserNumeros(local) & 0b001111) | (0b110000);
             } else if (aux[1] == 'l') {
-                resultado.valor = (parserNumeros(local) & 0b011111);
+                resultado.valor = (parserNumeros(local) & 0b001111) | (0b010000);
             } else {
-                resultado.valor = (parserNumeros(local) & 0b101111);
+                resultado.valor = (parserNumeros(local) & 0b001111) | (0b100000);
             }
         }
     } else { //OPERADOR INMEDIATO
@@ -160,8 +160,8 @@ Toperando convierteOperando(char operando[]){ //LOS OPERANDOS SE CONVIERTEN DE U
     return resultado; //devuelve valor del operando y su tipo
 }
 
-/* la idea es recibir un número en formato string
-y convertirlo a decimal int basados en la especificación de la MV */
+/* la idea es recibir un nÃºmero en formato string
+y convertirlo a decimal int basados en la especificaciÃ³n de la MV */
 int parserNumeros(char num[]){
     char aux[100];
     int k = 0;
@@ -177,7 +177,7 @@ int parserNumeros(char num[]){
             k++;
         }
         return (int) strtol(aux, NULL, 16);
-    } else if (num[0] == '‘'){ //CARACTER ASCII
+    } else if (num[0] == 'â€˜'){ //CARACTER ASCII
         return (int) num[1];
     } else { //DECIMAL
         size_t startValue = num[0] == '#' ? 1 : 0;
