@@ -191,7 +191,7 @@ int parserNumeros(char num[]){
 
 /*Devuelve la longitud del code segment, toma en cuenta las lineas
 que poseen mnemonico, ya sea valido o no ya que todos son traducidos igualmente
-Dado que es una longitud, el DS comienza en el valor de longitudCS*/
+Dado que es una longitud, el DS comienza en el valor de longitudCS. CONISDERAR, ademas,las posiciones del header*/
 
 int calculaCS (char nombreArchivo[]){
     FILE * arch = fopen(nombreArchivo, "r+");
