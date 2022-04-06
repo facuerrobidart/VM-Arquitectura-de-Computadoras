@@ -30,8 +30,7 @@ typedef struct Toperando {
 
 int main(int argc, char *argv[])
 {
-    int resultado = generaInstruccion(traduceMnemonico("mov"),"al", "ah");
-    printf("%08X", resultado);
+    leerArchivo();
     return 0;
 }
 
@@ -39,17 +38,17 @@ int main(int argc, char *argv[])
 solamente hay que tener cuidado de poner el formato
 adecuado cuando se hace printf y scanf*/
 
-void leerArchivo(int instructtiones[]){
-    FILE * arch = fopen("Fibonacci.txt", 'r');
-    char linea[100];
-    int instruccion = 0x00000000;
-
+void leerArchivo(){
+    FILE * arch = fopen("prueba.txt", "r+");
+    char linea[100] = "";
+    int instruccion;
     /*parsed[0] = rotulo, parsed[1] mnemonico SIEMPRE != NULL si no se ignora, parsed[2] y [3] operandos, parsed[4] comment*/
     if (arch != NULL) {
         while (fgets(linea,sizeof linea, arch)!=NULL){
             char **parsed = parseline(linea);
             if (parsed[1]) {
-                instruccion = instruccion | traduceMnemonico(parsed[1]);
+                instruccion = generaInstruccion(traduceMnemonico(parsed[1]), parsed[2], parsed[3]);
+                printf("%08X %s\n", instruccion, linea);
             } else {
                 if (!parsed[2] && !parsed[3] && parsed[4]){
                     printf(parsed[4]);
@@ -143,12 +142,17 @@ void traduceOperando(char operando[], Toperando *input){ //LOS OPERANDOS SE CONV
     resultado.tipo = NULL;
 
     if (operando[0] == '[') { //OPERADOR DIRECTO
-        char aux[strlen(operando)-2];
+        char aux[10] = "";
         int k = 0;
-        for(size_t i=1; i < strlen(aux) - 1; i++){ //recorremos entre corchetes
-            aux[k] = operando[i];
-            k++;
+        int i = 0; //recorremos entre corchetes
+        while (i < sizeof(operando)) {
+            if (operando[i] != '[' && operando != ']') {
+                aux[k] = operando[i];
+                k++;
+            }
+            i++;
         }
+
         resultado.tipo=2;
         resultado.valor=parserNumeros(aux);
     } else if (('a'<=operando[0] && operando[0]<='z') || ('A'<=operando[0] && operando[0]<='Z')) { //OPERADOR DE REGISTRO
@@ -203,7 +207,7 @@ void traduceOperando(char operando[], Toperando *input){ //LOS OPERANDOS SE CONV
 /* la idea es recibir un número en formato string
 y convertirlo a decimal int basados en la especificación de la MV */
 int parserNumeros(char num[]){
-    char aux[100];
+    char aux[100]= "";
     int k = 0;
     if (num[0] == '@'){ //OCTAL
         for(size_t i=1; i<strlen(num); i++){
