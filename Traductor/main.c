@@ -39,6 +39,7 @@ solamente hay que tener cuidado de poner el formato
 adecuado cuando se hace printf y scanf*/
 
 void leerArchivo(){
+    //Estamos probando traducir fibonnacci sin los jumps en el codigo (WIP)
     FILE * arch = fopen("prueba.txt", "r+");
     char linea[100] = "";
     int instruccion;
