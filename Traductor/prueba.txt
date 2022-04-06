@@ -1,0 +1,9 @@
+mov [10], 0
+mov [20], 1
+swap [10], [20]
+add [20], [10]
+mov eax, %001
+mov ecx, 1
+mov edx, 10
+sys 2
+fin: stop

@@ -30,9 +30,8 @@ typedef struct Toperando {
 
 int main(int argc, char *argv[])
 {
-    Toperando resultado;
-    traduceOperando("", &resultado);
-    printf("%8X", resultado.valor);
+    int resultado = generaInstruccion(traduceMnemonico("mov"),"al", "ah");
+    printf("%08X", resultado);
     return 0;
 }
 
@@ -64,7 +63,6 @@ void leerArchivo(int instructtiones[]){
         printf("[ERROR] El archivo no existe");
     }
 }
-
 
 /*Esta funcion traduce los mnemonicos de char a binario
 Recibe un mnemonico y compara contra la lista de mnemonicos
@@ -103,30 +101,39 @@ int traduceMnemonico(char instruccion[]){
 int generaInstruccion(int codOp, char operando1[], char operando2[]){
     Toperando res1;
     Toperando res2;
-    int instruccion;
-
-    if (codOp & 0xF0000000 != 0xF0000000) { //operador con dos operandos
+    int instruccion = 0x00000000;
+    if ((codOp & 0xF0000000) != 0xF0000000) { //operador con dos operandos
         traduceOperando(operando1, &res1);
         traduceOperando(operando2, &res2);
         //seteo instruccion
         instruccion = (codOp & 0xF0000000);
         //seteo tipo operando
-        instruccion = (instruccion || ((res1.tipo << 26) & 0b00001100000000000000000000000000);
-        instruccion = (instruccion || ((res2.tipo << 24) & 0b00000011000000000000000000000000);
+        instruccion = instruccion | ((res1.tipo << 26) & 0b00001100000000000000000000000000);
+        instruccion = instruccion | ((res2.tipo << 24) & 0b00000011000000000000000000000000);
         //seteo valores de operando
         if (res1.valor > pow(2,12)){
-            printf("[WARNING] Operando 1")
+            printf("[WARNING] Operando 1 truncado\n");
         }
         if (res2.valor > pow(2,12)){
-
+            printf("[WARNING] Operando 2 truncado\n");
         }
-        instruccion = (instruccion || (res1.valor << 12) & 0x00FFF000);
-        instruccion = (instruccion || (res2.valor) & 0x00000FFF);
-    } else if (codOp & 0xFF000000 != 0xFF000000){ //operador con un operando
+        instruccion = instruccion | ((res1.valor << 12) & 0x00FFF000);
+        instruccion = instruccion | ((res2.valor) & 0x00000FFF);
+    } else if ((codOp & 0xFF000000) != 0xFF000000){ //operador con un operando
         traduceOperando(operando1, &res1);
+        //seteo instruccion
+        instruccion = (codOp & 0xFF000000);
+        //seteo tipo operando
+        instruccion = instruccion | ((res1.tipo << 22) & 0b00000000110000000000000000000000);
+        //seteo valor de operando
+        if (res1.valor > pow(2,16)){
+            printf("[WARNING] Operando Truncado\n");
+        }
+        instruccion = instruccion | ((res1.valor) & 0x0000FFFF);
     } else { //sin operandos
         return codOp & 0xFFF00000;
     }
+    return instruccion;
 }
 
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
@@ -162,7 +169,7 @@ void traduceOperando(char operando[], Toperando *input){ //LOS OPERANDOS SE CONV
             resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
         } else {
             char local[3] = "%";
-            local[1] = aux[1]; //el registro se referencia con el primer caracter si no es extendido
+            local[1] = aux[0]; //el registro se referencia con el primer caracter si no es extendido
             if (aux[1] == 'x') {
                 resultado.valor = (parserNumeros(local) & 0b001111) | (0b110000);
             } else if (aux[1] == 'l') {
