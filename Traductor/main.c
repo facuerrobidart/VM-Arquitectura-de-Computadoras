@@ -3,6 +3,7 @@
 #include "string.h"
 #include "./parser.h"
 #include <ctype.h>
+#include <math.h>
 
 /*DICCIONARIO DE MNEMONICOS: Son arrays que contienen los mnemonicos
 ordenados según su código (respecto a la tabla de la especificación).
@@ -17,6 +18,11 @@ const char *oneOp[] = {
     "ldh","rnd","not"};
 const char *noOp[] = {"stop"};
 
+const char *registers[10] = {
+    "ds", "", "", "", "",
+    "ip", "", "", "cc", "ac"
+};
+
 typedef struct Toperando {
     int tipo; //0=inmediato, 1=de registro, 2=directo
     int valor;
@@ -24,7 +30,9 @@ typedef struct Toperando {
 
 int main(int argc, char *argv[])
 {
-    printf("%8X", parserNumeros("@-2"));
+    Toperando resultado;
+    traduceOperando("", &resultado);
+    printf("%8X", resultado.valor);
     return 0;
 }
 
@@ -57,13 +65,6 @@ void leerArchivo(int instructtiones[]){
     }
 }
 
-
-/*validamos que los registros de operadores de registro
- tengan un nombre valido*/
-int validaRegistro(char reg[]){
-    return (strlen(reg) == 3 && reg[0] == 'e' && reg[1]>='a' && reg[1]<='f' && reg[2] == 'x')
-    || (strlen(reg) == 2 && reg[0]>='a' && reg[0]<='f' && (reg[1] == 'h' || reg[1] =='l' || reg[1] =='x'));
-}
 
 /*Esta funcion traduce los mnemonicos de char a binario
 Recibe un mnemonico y compara contra la lista de mnemonicos
@@ -99,19 +100,40 @@ int traduceMnemonico(char instruccion[]){
 }
 
 
-int traduceOperando(int codOp, char operando1[], char operando2[]){
-    /*if (codOp & 0xF0000000 != 0xF0000000) { //operador con dos operandos
+int generaInstruccion(int codOp, char operando1[], char operando2[]){
+    Toperando res1;
+    Toperando res2;
+    int instruccion;
 
+    if (codOp & 0xF0000000 != 0xF0000000) { //operador con dos operandos
+        traduceOperando(operando1, &res1);
+        traduceOperando(operando2, &res2);
+        //seteo instruccion
+        instruccion = (codOp & 0xF0000000);
+        //seteo tipo operando
+        instruccion = (instruccion || ((res1.tipo << 26) & 0b00001100000000000000000000000000);
+        instruccion = (instruccion || ((res2.tipo << 24) & 0b00000011000000000000000000000000);
+        //seteo valores de operando
+        if (res1.valor > pow(2,12)){
+            printf("[WARNING] Operando 1")
+        }
+        if (res2.valor > pow(2,12)){
+
+        }
+        instruccion = (instruccion || (res1.valor << 12) & 0x00FFF000);
+        instruccion = (instruccion || (res2.valor) & 0x00000FFF);
     } else if (codOp & 0xFF000000 != 0xFF000000){ //operador con un operando
-
+        traduceOperando(operando1, &res1);
     } else { //sin operandos
-        return
-    }*/
+        return codOp & 0xFFF00000;
+    }
 }
 
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
-Toperando convierteOperando(char operando[]){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
-    Toperando resultado;
+void traduceOperando(char operando[], Toperando *input){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
+    Toperando resultado = *input;
+    resultado.valor = -100;
+    resultado.tipo = NULL;
 
     if (operando[0] == '[') { //OPERADOR DIRECTO
         char aux[strlen(operando)-2];
@@ -122,7 +144,7 @@ Toperando convierteOperando(char operando[]){ //LOS OPERANDOS SE CONVIERTEN DE U
         }
         resultado.tipo=2;
         resultado.valor=parserNumeros(aux);
-    } else if (('a'<=operando[0] && operando[0]<='f') || ('A'<=operando[0] && operando[0]<='F')) { //OPERADOR DE REGISTRO
+    } else if (('a'<=operando[0] && operando[0]<='z') || ('A'<=operando[0] && operando[0]<='Z')) { //OPERADOR DE REGISTRO
         resultado.tipo = 1;
 
         char aux[strlen(operando)];
@@ -132,32 +154,43 @@ Toperando convierteOperando(char operando[]){ //LOS OPERANDOS SE CONVIERTEN DE U
             aux[l] = aux[l] | 0x20; // convierto a minusculas caracter a caracter
         }
 
-        if (!validaRegistro(aux)){
-                printf("[WARNING] REGISTRO INVALIDO");
-        }
 
         if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
             char local[3] = "%";
-            strcat(local, aux[1]);
+            local[1] = aux[1];
 
             resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
         } else {
             char local[3] = "%";
-            strcat(local, aux[0]); //el registro se referencia con el primer caracter si no es extendido
+            local[1] = aux[1]; //el registro se referencia con el primer caracter si no es extendido
             if (aux[1] == 'x') {
                 resultado.valor = (parserNumeros(local) & 0b001111) | (0b110000);
             } else if (aux[1] == 'l') {
                 resultado.valor = (parserNumeros(local) & 0b001111) | (0b010000);
-            } else {
+            } else if (aux[1] == 'h') {
                 resultado.valor = (parserNumeros(local) & 0b001111) | (0b100000);
+            } else {
+                //CASOS DS, IP, CC, AC
+                int i = 0;
+                while (i < 10 && strcmp(aux, registers[i]) != 0) {
+                    i++;
+                }
+                if (i<10) {
+                    resultado.valor = (i & 0b001111);
+                }
             }
         }
+        if (resultado.valor == -100){
+            printf("[WARNING] REGISTRO INVALIDO %s", operando);
+        }
     } else { //OPERADOR INMEDIATO
+        char aux[strlen(operando)];
+        strcpy(aux, operando);
         resultado.tipo = 0;
         resultado.valor = parserNumeros(aux);
     }
 
-    return resultado; //devuelve valor del operando y su tipo
+    *input = resultado;
 }
 
 /* la idea es recibir un número en formato string
