@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include "parser.h"
 
 #ifdef _WIN32
@@ -34,7 +33,7 @@ char **parseline(char *line)
   char elem[256];
   int i = 0;
 
-  while (fgets(elem, 256, file))
+  while (i < 5 && fgets(elem, 256, file))
   {
     size_t length = strlen(elem);
 

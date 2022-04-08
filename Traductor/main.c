@@ -18,9 +18,16 @@ const char *oneOp[] = {
     "ldh","rnd","not"};
 const char *noOp[] = {"stop"};
 
-const char *registers[10] = {
+const char *registers[] = {
     "ds", "", "", "", "",
     "ip", "", "", "cc", "ac"
+};
+
+const char *standardRegisters[] = {
+    "eax","ebx","ecx","edx","eex","efx",
+    "ax","bx","cx","dx","ex","fx",
+    "al","bl","cl","dl","el","fl",
+    "ah","bh","ch","ch","eh","fh"
 };
 
 typedef struct Toperando {
@@ -28,9 +35,15 @@ typedef struct Toperando {
     int valor;
 } Toperando;
 
+typedef struct TRotulo {
+    int nroLinea;
+    char rotulo[30];
+} TRotulo;
+
 int main(int argc, char *argv[])
 {
     leerArchivo();
+
     return 0;
 }
 
@@ -39,16 +52,25 @@ solamente hay que tener cuidado de poner el formato
 adecuado cuando se hace printf y scanf*/
 
 void leerArchivo(){
+    TRotulo rotulos[100];
+    int cantidadRotulos = 0;
+    int resultado = calculaCS(rotulos, &cantidadRotulos);
+    for(int i=0;i < cantidadRotulos; i++){
+        printf("%d %s\n", rotulos[i].nroLinea, rotulos[i].rotulo);
+    }
+    printf("%d\n", resultado);
+
     //Estamos probando traducir fibonnacci sin los jumps en el codigo (WIP)
     FILE * arch = fopen("prueba.txt", "r+");
-    char linea[100] = "";
+    char linea[400] = "";
     int instruccion;
     /*parsed[0] = rotulo, parsed[1] mnemonico SIEMPRE != NULL si no se ignora, parsed[2] y [3] operandos, parsed[4] comment*/
     if (arch != NULL) {
         while (fgets(linea,sizeof linea, arch)!=NULL){
             char **parsed = parseline(linea);
             if (parsed[1]) {
-                instruccion = generaInstruccion(traduceMnemonico(parsed[1]), parsed[2], parsed[3]);
+                int traducido = traduceMnemonico(parsed[1]);
+                instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos);
                 printf("%08X %s\n", instruccion, linea);
             } else {
                 if (!parsed[2] && !parsed[3] && parsed[4]){
@@ -62,6 +84,21 @@ void leerArchivo(){
     } else {
         printf("[ERROR] El archivo no existe");
     }
+}
+
+
+int esRegistro(char registro[]){
+    for(int i=0; i < 24; i++){
+        if (strcmp(registro, standardRegisters[i]) == 0){
+            return 1;
+        }
+    }
+    for(int j=0; j<10; j++){
+        if (strcmp(registro, registers[j]) == 0){
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /*Esta funcion traduce los mnemonicos de char a binario
@@ -98,13 +135,13 @@ int traduceMnemonico(char instruccion[]){
 }
 
 
-int generaInstruccion(int codOp, char operando1[], char operando2[]){
+int generaInstruccion(int codOp, char operando1[], char operando2[], TRotulo rotulos[], int cantRotulos){
     Toperando res1;
     Toperando res2;
     int instruccion = 0x00000000;
     if ((codOp & 0xF0000000) != 0xF0000000) { //operador con dos operandos
-        traduceOperando(operando1, &res1);
-        traduceOperando(operando2, &res2);
+        traduceOperando(operando1, &res1, rotulos, cantRotulos);
+        traduceOperando(operando2, &res2, rotulos, cantRotulos);
         //seteo instruccion
         instruccion = (codOp & 0xF0000000);
         //seteo tipo operando
@@ -120,7 +157,7 @@ int generaInstruccion(int codOp, char operando1[], char operando2[]){
         instruccion = instruccion | ((res1.valor << 12) & 0x00FFF000);
         instruccion = instruccion | ((res2.valor) & 0x00000FFF);
     } else if ((codOp & 0xFF000000) != 0xFF000000){ //operador con un operando
-        traduceOperando(operando1, &res1);
+        traduceOperando(operando1, &res1, rotulos, cantRotulos);
         //seteo instruccion
         instruccion = (codOp & 0xFF000000);
         //seteo tipo operando
@@ -137,7 +174,7 @@ int generaInstruccion(int codOp, char operando1[], char operando2[]){
 }
 
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
-void traduceOperando(char operando[], Toperando *input){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
+void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int cantRotulos){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
     Toperando resultado = *input;
     resultado.valor = -100;
     resultado.tipo = NULL;
@@ -156,7 +193,7 @@ void traduceOperando(char operando[], Toperando *input){ //LOS OPERANDOS SE CONV
 
         resultado.tipo=2;
         resultado.valor=parserNumeros(aux);
-    } else if (('a'<=operando[0] && operando[0]<='z') || ('A'<=operando[0] && operando[0]<='Z')) { //OPERADOR DE REGISTRO
+    } else if (('a'<=operando[0] && operando[0]<='z') || ('A'<=operando[0] && operando[0]<='Z')) {
         resultado.tipo = 1;
 
         char aux[strlen(operando)];
@@ -166,34 +203,44 @@ void traduceOperando(char operando[], Toperando *input){ //LOS OPERANDOS SE CONV
             aux[l] = aux[l] | 0x20; // convierto a minusculas caracter a caracter
         }
 
+        if (esRegistro(operando)) { //OPERADOR DE REGISTRO
+            if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
+                char local[3] = "%";
+                local[1] = aux[1];
 
-        if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
-            char local[3] = "%";
-            local[1] = aux[1];
-
-            resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
-        } else {
-            char local[3] = "%";
-            local[1] = aux[0]; //el registro se referencia con el primer caracter si no es extendido
-            if (aux[1] == 'x') {
-                resultado.valor = (parserNumeros(local) & 0b001111) | (0b110000);
-            } else if (aux[1] == 'l') {
-                resultado.valor = (parserNumeros(local) & 0b001111) | (0b010000);
-            } else if (aux[1] == 'h') {
-                resultado.valor = (parserNumeros(local) & 0b001111) | (0b100000);
+                resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
             } else {
-                //CASOS DS, IP, CC, AC
-                int i = 0;
-                while (i < 10 && strcmp(aux, registers[i]) != 0) {
-                    i++;
-                }
-                if (i<10) {
-                    resultado.valor = (i & 0b001111);
+                char local[3] = "%";
+                local[1] = aux[0]; //el registro se referencia con el primer caracter si no es extendido
+                if (aux[1] == 'x') {
+                    resultado.valor = (parserNumeros(local) & 0b001111) | (0b110000);
+                } else if (aux[1] == 'l') {
+                    resultado.valor = (parserNumeros(local) & 0b001111) | (0b010000);
+                } else if (aux[1] == 'h') {
+                    resultado.valor = (parserNumeros(local) & 0b001111) | (0b100000);
+                } else {
+                    //CASOS DS, IP, CC, AC
+                    int i = 0;
+                    while (i < 10 && strcmp(aux, registers[i]) != 0) {
+                        i++;
+                    }
+                    if (i<10) {
+                        resultado.valor = (i & 0b001111);
+                    }
                 }
             }
-        }
-        if (resultado.valor == -100){
-            printf("[WARNING] REGISTRO INVALIDO %s", operando);
+        } else { //tenemos que buscar el rotulo al cual saltar
+            resultado.tipo=0;
+            int i = 0;
+            while (i<cantRotulos && strcmp(operando, rotulos[i].rotulo) != 0) {
+                i++;
+            }
+            if (i<cantRotulos){
+                resultado.valor = rotulos[i].nroLinea;
+            } else{
+                printf("[ERROR] Rotulo no encontrado: %s\n", operando);
+                resultado.valor = 0xFFFF;
+            }
         }
     } else { //OPERADOR INMEDIATO
         char aux[strlen(operando)];
@@ -238,18 +285,25 @@ int parserNumeros(char num[]){
 que poseen mnemonico, ya sea valido o no ya que todos son traducidos igualmente
 Dado que es una longitud, el DS comienza en el valor de longitudCS. CONISDERAR, ademas,las posiciones del header*/
 
-int calculaCS (char nombreArchivo[]){
-    FILE * arch = fopen(nombreArchivo, "r+");
+int calculaCS(TRotulo rotulos[], int *result){
+    FILE * arch = fopen("prueba.txt", "r+");
     char linea[200];
     int longitudCS = 0;
+    int cantRotulos = 0;
     if (arch != NULL) {
         while (fgets(linea,sizeof linea, arch)!=NULL){
             char **parsed = parseline(linea);
+            if (parsed[0]){
+                strcpy(rotulos[cantRotulos].rotulo, parsed[0]);
+                rotulos[cantRotulos].nroLinea = longitudCS;
+                cantRotulos++;
+            }
             if (parsed[1]) {
                 longitudCS++;
             }
         }
         fclose(arch);
+        *result = cantRotulos;
     } else {
         printf("[ERROR] El archivo no existe");
     }

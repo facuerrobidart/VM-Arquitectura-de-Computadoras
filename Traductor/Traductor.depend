@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1649222309 source:c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\main.c
+1649396089 source:c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\main.c
 	<stdio.h>
 	<stdlib.h>
 	"string.h"
@@ -7,12 +7,11 @@
 	<ctype.h>
 	<math.h>
 
-1648787168 c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\parser.h
+1648049340 c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\parser.h
 
-1648787162 source:c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\parser.c
+1648918638 source:c:\users\gamer\documents\arquitectura de computadoras\vm-arquitectura-de-computadoras\traductor\parser.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
-	<unistd.h>
 	"parser.h"
 
