@@ -4,6 +4,31 @@
 #include "./parser.h"
 #include <ctype.h>
 #include <math.h>
+/* --- PRINTF_BYTE_TO_BINARY macro's --- */
+#define PRINTF_BINARY_PATTERN_INT8 "%c%c%c%c%c%c%c%c"
+#define PRINTF_BYTE_TO_BINARY_INT8(i)    \
+    (((i) & 0x80ll) ? '1' : '0'), \
+    (((i) & 0x40ll) ? '1' : '0'), \
+    (((i) & 0x20ll) ? '1' : '0'), \
+    (((i) & 0x10ll) ? '1' : '0'), \
+    (((i) & 0x08ll) ? '1' : '0'), \
+    (((i) & 0x04ll) ? '1' : '0'), \
+    (((i) & 0x02ll) ? '1' : '0'), \
+    (((i) & 0x01ll) ? '1' : '0')
+
+#define PRINTF_BINARY_PATTERN_INT16 \
+    PRINTF_BINARY_PATTERN_INT8              PRINTF_BINARY_PATTERN_INT8
+#define PRINTF_BYTE_TO_BINARY_INT16(i) \
+    PRINTF_BYTE_TO_BINARY_INT8((i) >> 8),   PRINTF_BYTE_TO_BINARY_INT8(i)
+#define PRINTF_BINARY_PATTERN_INT32 \
+    PRINTF_BINARY_PATTERN_INT16             PRINTF_BINARY_PATTERN_INT16
+#define PRINTF_BYTE_TO_BINARY_INT32(i) \
+    PRINTF_BYTE_TO_BINARY_INT16((i) >> 16), PRINTF_BYTE_TO_BINARY_INT16(i)
+#define PRINTF_BINARY_PATTERN_INT64    \
+    PRINTF_BINARY_PATTERN_INT32             PRINTF_BINARY_PATTERN_INT32
+#define PRINTF_BYTE_TO_BINARY_INT64(i) \
+    PRINTF_BYTE_TO_BINARY_INT32((i) >> 32), PRINTF_BYTE_TO_BINARY_INT32(i)
+/* --- end macros --- */
 
 /*DICCIONARIO DE MNEMONICOS: Son arrays que contienen los mnemonicos
 ordenados según su código (respecto a la tabla de la especificación).
@@ -40,10 +65,16 @@ typedef struct TRotulo {
     char rotulo[30];
 } TRotulo;
 
+int calculaCS(char nombreArchivo[], TRotulo rotulos[], int *nRotulos);
+char *stringBinario(int num);
+
 int main(int argc, char *argv[])
 {
-    leerArchivo();
-
+    if (argv[1] && argv[2]) {
+        leerArchivo(argv[1], argv[2],(argv[3] != NULL && strcmp("-o", argv[3]) == 0));
+    } else {
+        printf("[ERROR] Faltan argumentos\n");
+    }
     return 0;
 }
 
@@ -51,42 +82,54 @@ int main(int argc, char *argv[])
 solamente hay que tener cuidado de poner el formato
 adecuado cuando se hace printf y scanf*/
 
-void leerArchivo(){
+void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     TRotulo rotulos[100];
     int cantidadRotulos = 0;
-    int resultado = calculaCS(rotulos, &cantidadRotulos);
-    for(int i=0;i < cantidadRotulos; i++){
+    strcat(nombreOutput, ".mv1");
+    int longCS = calculaCS(nombreArchivo, rotulos, &cantidadRotulos);
+    FILE * output = fopen(nombreOutput, "w+");
+
+    //HEADERS DEL BINARIO
+    fprintf(output, "%s\n", "01001101010101100010110100110001 "); //MV-1
+    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(longCS));
+    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
+    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
+    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
+    fprintf(output, "%s\n", "01010110001011100011001000110010"); //V.22
+    //FIN HEADERS
+
+    /*for(int i=0;i < cantidadRotulos; i++){
         printf("%d %s\n", rotulos[i].nroLinea, rotulos[i].rotulo);
     }
-    printf("%d\n", resultado);
+    printf("%d\n", longCS);*/
 
     //Estamos probando traducir fibonnacci sin los jumps en el codigo (WIP)
-    FILE * arch = fopen("prueba.txt", "r+");
+    FILE * arch = fopen(nombreArchivo, "r+");
     char linea[400] = "";
     int instruccion;
+    int nroLinea = 0;
     /*parsed[0] = rotulo, parsed[1] mnemonico SIEMPRE != NULL si no se ignora, parsed[2] y [3] operandos, parsed[4] comment*/
-    if (arch != NULL) {
-        while (fgets(linea,sizeof linea, arch)!=NULL){
-            char **parsed = parseline(linea);
-            if (parsed[1]) {
-                int traducido = traduceMnemonico(parsed[1]);
-                instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos);
-                printf("%08X %s\n", instruccion, linea);
+    while (fgets(linea,sizeof linea, arch)!=NULL){
+        char **parsed = parseline(linea);
+        if (parsed[1]) {
+            int traducido = traduceMnemonico(parsed[1]);
+            instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos);
+            if (mostrar) {
+                printf("[%04d] %08X %s\n", nroLinea,instruccion, linea);
+            }
+            fprintf(output,PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
+        } else {
+            if (!parsed[2] && !parsed[3] && parsed[4]){
+                printf(parsed[4]);
             } else {
-                if (!parsed[2] && !parsed[3] && parsed[4]){
-                    printf(parsed[4]);
-                } else {
-                    printf("[ERROR] Operandos presentes en una línea sin instrucción");
-                }
+                printf("[ERROR] Operandos presentes en una línea sin instrucción");
             }
         }
-        fclose(arch);
-    } else {
-        printf("[ERROR] El archivo no existe");
+        nroLinea++;
     }
+    fclose(arch);
+    fclose(output);
 }
-
-
 int esRegistro(char registro[]){
     for(int i=0; i < 24; i++){
         if (strcmp(registro, standardRegisters[i]) == 0){
@@ -285,8 +328,8 @@ int parserNumeros(char num[]){
 que poseen mnemonico, ya sea valido o no ya que todos son traducidos igualmente
 Dado que es una longitud, el DS comienza en el valor de longitudCS. CONISDERAR, ademas,las posiciones del header*/
 
-int calculaCS(TRotulo rotulos[], int *result){
-    FILE * arch = fopen("prueba.txt", "r+");
+int calculaCS(char nombreArchivo[], TRotulo rotulos[], int *nRotulos){
+    FILE * arch = fopen(nombreArchivo, "r+");
     char linea[200];
     int longitudCS = 0;
     int cantRotulos = 0;
@@ -303,11 +346,16 @@ int calculaCS(TRotulo rotulos[], int *result){
             }
         }
         fclose(arch);
-        *result = cantRotulos;
+        *nRotulos = cantRotulos;
     } else {
-        printf("[ERROR] El archivo no existe");
+        printf("[ERROR] El archivo no existe\n");
     }
 
     return longitudCS;
 }
 
+char *stringBinario(int num){
+    char resultado[33];
+    itoa(num, resultado, 2);
+    return resultado;
+}
