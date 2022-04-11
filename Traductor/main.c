@@ -1,69 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "string.h"
-#include "./parser.h"
+#include "parser.h"
+#include "pattern.h"
 #include <ctype.h>
 #include <math.h>
-/* --- PRINTF_BYTE_TO_BINARY macro's --- */
-#define PRINTF_BINARY_PATTERN_INT8 "%c%c%c%c%c%c%c%c"
-#define PRINTF_BYTE_TO_BINARY_INT8(i)    \
-    (((i) & 0x80ll) ? '1' : '0'), \
-    (((i) & 0x40ll) ? '1' : '0'), \
-    (((i) & 0x20ll) ? '1' : '0'), \
-    (((i) & 0x10ll) ? '1' : '0'), \
-    (((i) & 0x08ll) ? '1' : '0'), \
-    (((i) & 0x04ll) ? '1' : '0'), \
-    (((i) & 0x02ll) ? '1' : '0'), \
-    (((i) & 0x01ll) ? '1' : '0')
+#include "diccionario.h"
 
-#define PRINTF_BINARY_PATTERN_INT16 \
-    PRINTF_BINARY_PATTERN_INT8              PRINTF_BINARY_PATTERN_INT8
-#define PRINTF_BYTE_TO_BINARY_INT16(i) \
-    PRINTF_BYTE_TO_BINARY_INT8((i) >> 8),   PRINTF_BYTE_TO_BINARY_INT8(i)
-#define PRINTF_BINARY_PATTERN_INT32 \
-    PRINTF_BINARY_PATTERN_INT16             PRINTF_BINARY_PATTERN_INT16
-#define PRINTF_BYTE_TO_BINARY_INT32(i) \
-    PRINTF_BYTE_TO_BINARY_INT16((i) >> 16), PRINTF_BYTE_TO_BINARY_INT16(i)
-#define PRINTF_BINARY_PATTERN_INT64    \
-    PRINTF_BINARY_PATTERN_INT32             PRINTF_BINARY_PATTERN_INT32
-#define PRINTF_BYTE_TO_BINARY_INT64(i) \
-    PRINTF_BYTE_TO_BINARY_INT32((i) >> 32), PRINTF_BYTE_TO_BINARY_INT32(i)
-/* --- end macros --- */
-
-/*DICCIONARIO DE MNEMONICOS: Son arrays que contienen los mnemonicos
-ordenados según su código (respecto a la tabla de la especificación).
-Estan separados por su cantidad de operandos.*/
-const char *twoOp[] = {
-    "mov","add","sub",
-    "swap","mul","div","cmp",
-    "shl","sht","and","or","xor"};
-const char *oneOp[] = {
-    "sys","jmp","jz","jp","jn",
-    "jnz","jnp","jnn","ldl",
-    "ldh","rnd","not"};
-const char *noOp[] = {"stop"};
-
-const char *registers[] = {
-    "ds", "", "", "", "",
-    "ip", "", "", "cc", "ac"
-};
-
-const char *standardRegisters[] = {
-    "eax","ebx","ecx","edx","eex","efx",
-    "ax","bx","cx","dx","ex","fx",
-    "al","bl","cl","dl","el","fl",
-    "ah","bh","ch","ch","eh","fh"
-};
-
-typedef struct Toperando {
-    int tipo; //0=inmediato, 1=de registro, 2=directo
-    int valor;
-} Toperando;
-
-typedef struct TRotulo {
-    int nroLinea;
-    char rotulo[30];
-} TRotulo;
 
 int calculaCS(char nombreArchivo[], TRotulo rotulos[], int *nRotulos);
 char *stringBinario(int num);
