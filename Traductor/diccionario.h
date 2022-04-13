@@ -1,10 +1,10 @@
 /*DICCIONARIO DE MNEMONICOS: Son arrays que contienen los mnemonicos
-ordenados según su código (respecto a la tabla de la especificación).
+ordenados segÃºn su cÃ³digo (respecto a la tabla de la especificaciÃ³n).
 Estan separados por su cantidad de operandos.*/
 const char *twoOp[] = {
     "mov","add","sub",
     "swap","mul","div","cmp",
-    "shl","sht","and","or","xor"};
+    "shl","shr","and","or","xor"};
 const char *oneOp[] = {
     "sys","jmp","jz","jp","jn",
     "jnz","jnp","jnn","ldl",
