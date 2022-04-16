@@ -189,7 +189,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
             aux[l] = aux[l] | 0x20; // convierto a minusculas caracter a caracter
         }
 
-        if (esRegistro(operando)) { //OPERADOR DE REGISTRO
+        if (esRegistro(aux)) { //OPERADOR DE REGISTRO
             if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
                 char local[3] = "%";
                 local[1] = aux[1];
@@ -255,7 +255,7 @@ int parserNumeros(char num[]){
             k++;
         }
         return (int) strtol(aux, NULL, 16);
-    } else if (num[0] == '‘'){ //CARACTER ASCII
+    } else if (num[0] == '\''){ //CARACTER ASCII
         return (int) num[1];
     } else { //DECIMAL
         size_t startValue = num[0] == '#' ? 1 : 0;

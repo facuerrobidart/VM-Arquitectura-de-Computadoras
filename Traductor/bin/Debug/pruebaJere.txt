@@ -1,0 +1,9 @@
+mov eex, 1001
+mov ebx, 100
+add eex, ebx
+mov [1], eex
+sys %F
+mov eax, 2305
+mov edx,1
+mov ecx,1
+sys 2
