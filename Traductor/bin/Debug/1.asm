@@ -1,0 +1,2 @@
+mov AX,'a 
+stop
