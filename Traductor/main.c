@@ -41,12 +41,6 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     fprintf(output, "%s\n", "01010110001011100011001000110010"); //V.22
     //FIN HEADERS
 
-    /*for(int i=0;i < cantidadRotulos; i++){
-        printf("%d %s\n", rotulos[i].nroLinea, rotulos[i].rotulo);
-    }
-    printf("%d\n", longCS);*/
-
-    //Estamos probando traducir fibonnacci sin los jumps en el codigo (WIP)
     FILE * arch = fopen(nombreArchivo, "r+");
     char linea[400] = "";
     int instruccion;
