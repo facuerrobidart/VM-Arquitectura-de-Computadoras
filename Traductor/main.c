@@ -8,13 +8,13 @@
 #include "diccionario.h"
 
 
-int calculaCS(char nombreArchivo[], TRotulo rotulos[], int *nRotulos);
+int calculaCS(char nombreArchivo[], TRotulo rotulos[], int *nRotulos, int *es, int *ss, int *ds);
 char *stringBinario(int num);
 
 int main(int argc, char *argv[])
 {
     if (argv[1] && argv[2]) {
-        leerArchivo(argv[1], argv[2],(argv[3] != NULL && strcmp("-o", argv[3]) == 0));
+        leerArchivo(argv[1], argv[2],(argv[3] == NULL || strcmp("-o", argv[3]) != 0));
     } else {
         printf("[ERROR] Faltan argumentos\n");
     }
@@ -29,15 +29,16 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     TRotulo rotulos[100];
     int cantidadRotulos = 0;
     strcat(nombreOutput, ".mv1");
-    int longCS = calculaCS(nombreArchivo, rotulos, &cantidadRotulos);
+    int ss = 0, es = 0, ds = 0;
+    int longCS = calculaCS(nombreArchivo, rotulos, &cantidadRotulos, &es, &ss, &ds);
     FILE * output = fopen(nombreOutput, "w+");
 
     //HEADERS DEL BINARIO
-    fprintf(output, "%s\n", "01001101010101100010110100110001 "); //MV-1
+    fprintf(output, "%s\n", "01001101010101100010110100110010"); //MV-2
+    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(ds)); //longitudes de segments
+    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(ss));
+    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(es));
     fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(longCS));
-    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
-    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
-    fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
     fprintf(output, "%s\n", "01010110001011100011001000110010"); //V.22
     //FIN HEADERS
 
@@ -48,21 +49,23 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     /*parsed[0] = rotulo, parsed[1] mnemonico SIEMPRE != NULL si no se ignora, parsed[2] y [3] operandos, parsed[4] comment*/
     while (fgets(linea,sizeof linea, arch)!=NULL){
         char **parsed = parseline(linea);
-        if (parsed[1]) {
-            int traducido = traduceMnemonico(parsed[1]);
-            instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos);
-            if (mostrar) {
-                printf("[%04d] %08X %s\n", nroLinea,instruccion, linea);
-            }
-            fprintf(output,PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
-        } else {
-            if (!parsed[2] && !parsed[3] && parsed[4]){
-                printf(parsed[4]);
+        if (parsed) {
+            if (parsed[1]) {
+                int traducido = traduceMnemonico(parsed[1]);
+                instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos);
+                if (mostrar) {
+                    printf("[%04d] %08X %s\n", nroLinea,instruccion, linea);
+                }
+                fprintf(output,PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
+                nroLinea++;
             } else {
-                printf("[ERROR] Operandos presentes en una línea sin instrucción");
+                if (!parsed[2] && !parsed[3]){
+                    printf("%s\n", linea);
+                } else {
+                    printf("[ERROR] Operandos presentes en una linea sin instruccion");
+                }
             }
         }
-        nroLinea++;
     }
     fclose(arch);
     fclose(output);
@@ -265,21 +268,37 @@ int parserNumeros(char num[]){
 que poseen mnemonico, ya sea valido o no ya que todos son traducidos igualmente
 Dado que es una longitud, el DS comienza en el valor de longitudCS. CONISDERAR, ademas,las posiciones del header*/
 
-int calculaCS(char nombreArchivo[], TRotulo rotulos[], int *nRotulos){
+int calculaCS(char nombreArchivo[], TRotulo rotulos[], int *nRotulos, int *es, int *ss, int *ds){
     FILE * arch = fopen(nombreArchivo, "r+");
     char linea[200];
     int longitudCS = 0;
     int cantRotulos = 0;
+
+    *es = 1024; *ss = 1024; *ds = 1024;
+
     if (arch != NULL) {
-        while (fgets(linea,sizeof linea, arch)!=NULL){
+        while (fgets(linea,sizeof linea, arch)!=NULL) {
+
             char **parsed = parseline(linea);
             if (parsed[0]){
                 strcpy(rotulos[cantRotulos].rotulo, parsed[0]);
                 rotulos[cantRotulos].nroLinea = longitudCS;
                 cantRotulos++;
             }
-            if (parsed[1]) {
+
+            if (parsed[1])
                 longitudCS++;
+
+
+            if (parsed[5]){ //chequea las directivas
+                if (strcmp(parsed[5], "DATA") == 0)
+                    *ds = parserNumeros(parsed[6]);
+                else
+                    if (strcmp(parsed[5], "EXTRA") == 0)
+                        *es = parserNumeros(parsed[6]);
+                    else
+                        if (strcmp(parsed[5], "STACK") == 0)
+                            *ss = parserNumeros(parsed[6]);
             }
         }
         fclose(arch);
