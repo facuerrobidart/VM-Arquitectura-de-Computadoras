@@ -31,3 +31,14 @@ typedef struct TRotulo {
     int nroLinea;
     char rotulo[30];
 } TRotulo;
+
+typedef struct TEquNumber {
+    char nombre[11];
+    int valor;
+} TEquNumber;
+
+typedef struct TEquString {
+    char nombre[11];
+    char valor[30];
+    int offset;
+} TEquString;

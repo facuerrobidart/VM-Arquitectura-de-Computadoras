@@ -1,16 +1,3 @@
-\\STACK 500
-mov [10], 0 ;inicializo variables
-mov [20], 1
-otro: cmp [20], 100 ;compara
-jp fin ;salta si llegó a 100 o más
-swap [10], [20]
-\\EXTRA 500
-add [20], [10]
-
-;pepe
-mov eax, %001
-mov ecx, 1
-mov edx, 10
-sys 2 ;print [10] en decimal
-jmp otro
-fin: stop
+numero EQU 3
+mov [10], 0
+add [10], numero 
