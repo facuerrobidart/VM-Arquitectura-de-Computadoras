@@ -1,3 +1,4 @@
-numero EQU 3
-mov [10], 0
-add [10], numero 
+palabra EQU "tibau"
+jere EQU "jere"
+mov [10], palabra
+mov [20], jere

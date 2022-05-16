@@ -12,7 +12,7 @@ int calculaCS(char nombreArchivo[],
               TRotulo rotulos[],
               TEquNumber equs[],
               TEquString equsString[],
-              int *nRotulos, int *nEqus, int *nEquString,int *es, int *ss, int *ds);
+              int *nRotulos, int *nEqus, int *nEquString,int *es, int *ss, int *ds, int *csSinEqu);
 char *stringBinario(int num);
 
 int main(int argc, char *argv[])
@@ -33,13 +33,13 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     TRotulo rotulos[100];
     TEquNumber equsNumber[100];
     TEquString equsString[100];
-    int cantidadRotulos = 0, nEqusNumber = 0, nEqusString = 0, ss = 0, es = 0, ds = 0;
+    int cantidadRotulos = 0, nEqusNumber = 0, nEqusString = 0, ss = 0, es = 0, ds = 0, csSinEqus = 0;
 
     if (!strstr(nombreOutput, ".mv1")) { //si no nos pasan la extension en los argumentos del programa
         strcat(nombreOutput, ".mv1"); //le agregamos la extension
     }
 
-    int longCS = calculaCS(nombreArchivo, rotulos, equsNumber, equsString, &cantidadRotulos, &nEqusNumber, &nEqusString, &es, &ss, &ds);
+    int longCS = calculaCS(nombreArchivo, rotulos, equsNumber, equsString, &cantidadRotulos, &nEqusNumber, &nEqusString, &es, &ss, &ds, &csSinEqus);
     FILE * output = fopen(nombreOutput, "w+");
 
     //HEADERS DEL BINARIO
@@ -56,16 +56,19 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     int instruccion;
     int nroLinea = 0;
     /*parsed[0] = rotulo, parsed[1] mnemonico SIEMPRE != NULL si no se ignora, parsed[2] y [3] operandos, parsed[4] comment*/
-    while (fgets(linea,sizeof linea, arch)!=NULL){
+    while (fgets(linea,sizeof linea, arch) != NULL){
         char **parsed = parseline(linea);
         if (parsed) {
             if (parsed[1]) {
                 int traducido = traduceMnemonico(parsed[1]);
-                instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos, equsNumber, nEqusNumber);
+                instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos,
+                                                equsNumber, nEqusNumber,
+                                                equsString, nEqusString,
+                                                csSinEqus);
                 if (mostrar) {
                     printf("[%04d] %08X %s\n", nroLinea, instruccion, linea);
                 }
-                fprintf(output,PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
+                fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
                 nroLinea++;
             } else {
                 if (!parsed[2] && !parsed[3]){
@@ -77,8 +80,17 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
         }
     }
     fclose(arch);
+
+    for (int i = 0; i < nEqusString; i++) {
+        for (size_t k = 0; k < strlen(equsString[i].valor); k++) { //pasamos char a char los string definidos con directivas EQU
+            fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32((int) equsString[i].valor[k]));
+        }
+        fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
+    }
+
     fclose(output);
 }
+
 int esRegistro(char registro[]){
     for(int i=0; i < 24; i++){
         if (strcmp(registro, standardRegisters[i]) == 0){
@@ -129,13 +141,14 @@ int traduceMnemonico(char instruccion[]){
 
 int generaInstruccion(int codOp, char operando1[], char operando2[],
                       TRotulo rotulos[], int cantRotulos,
-                      TEquNumber equsNumber[], int nEqusNumber){
+                      TEquNumber equsNumber[], int nEqusNumber,
+                      TEquString equsString[], int nEqusString, int csSinEqus){
     Toperando res1;
     Toperando res2;
     int instruccion = 0x00000000;
     if ((codOp & 0xF0000000) != 0xF0000000) { //operador con dos operandos
-        traduceOperando(operando1, &res1, rotulos, cantRotulos, equsNumber, nEqusNumber);
-        traduceOperando(operando2, &res2, rotulos, cantRotulos, equsNumber, nEqusNumber);
+        traduceOperando(operando1, &res1, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus);
+        traduceOperando(operando2, &res2, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus);
         //seteo instruccion
         instruccion = (codOp & 0xF0000000);
         //seteo tipo operando
@@ -168,9 +181,9 @@ int generaInstruccion(int codOp, char operando1[], char operando2[],
 }
 
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
-void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int cantRotulos
-                     , TEquNumber equsNumber[]
-                     , int nEqusNumber){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
+void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int cantRotulos,
+                     TEquNumber equsNumber[], int nEqusNumber,
+                     TEquString equsString[], int nEqusString, int csSinEqus){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
     Toperando resultado = *input;
     resultado.valor = -100;
     resultado.tipo = NULL;
@@ -190,64 +203,79 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
         resultado.tipo=2;
         resultado.valor=parserNumeros(aux);
     } else if (('a'<=operando[0] && operando[0]<='z') || ('A'<=operando[0] && operando[0]<='Z')) {
-
+        int encontreEqu = 0;
         char aux[strlen(operando)];
+        int idx = 0;
         strcpy(aux,operando);
 
         for(size_t l=0; l<strlen(aux); l++){
             aux[l] = aux[l] | 0x20; // convierto a minusculas caracter a caracter
         }
 
-        for(int idx = 0; idx < nEqusNumber; idx++){
+        while (idx < nEqusNumber && !encontreEqu){
             if (strcmp(aux, equsNumber[idx].nombre) == 0){ //si el operando estaba definido en un EQU, lo trato como un operando inmediato
                 resultado.tipo = 0;
                 resultado.valor = equsNumber[idx].valor;
 
-                return resultado;
+                encontreEqu = 1;
             }
+            idx++;
         }
 
-        resultado.tipo = 1;
+        idx = 0;
+        while (idx < nEqusString && !encontreEqu) {
+            if (strcmp(aux, equsString[idx].nombre) == 0){
+                resultado.tipo = 2; //OPERANDO DIRECTO a la posicion del 1er caracter en el CS
+                resultado.valor = csSinEqus + equsString[idx].offset;
 
-        if (esRegistro(aux)) { //OPERADOR DE REGISTRO
-            if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
-                char local[3] = "%";
-                local[1] = aux[1];
+                encontreEqu = 1;
+            }
+            idx++;
+        }
 
-                resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
-            } else {
-                char local[3] = "%";
-                local[1] = aux[0]; //el registro se referencia con el primer caracter si no es extendido
-                if (aux[1] == 'x') {
-                    resultado.valor = (parserNumeros(local) & 0b001111) | (0b110000);
-                } else if (aux[1] == 'l') {
-                    resultado.valor = (parserNumeros(local) & 0b001111) | (0b010000);
-                } else if (aux[1] == 'h') {
-                    resultado.valor = (parserNumeros(local) & 0b001111) | (0b100000);
+        if (!encontreEqu) {
+            resultado.tipo = 1;
+            if (esRegistro(aux)) { //OPERADOR DE REGISTRO
+                if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
+                    char local[3] = "%";
+                    local[1] = aux[1];
+
+                    resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
                 } else {
-                    //CASOS DS, IP, CC, AC
-                    int i = 0;
-                    while (i < 10 && strcmp(aux, registers[i]) != 0) {
-                        i++;
-                    }
-                    if (i<10) {
-                        resultado.valor = (i & 0b001111);
+                    char local[3] = "%";
+                    local[1] = aux[0]; //el registro se referencia con el primer caracter si no es extendido
+                    if (aux[1] == 'x') {
+                        resultado.valor = (parserNumeros(local) & 0b001111) | (0b110000);
+                    } else if (aux[1] == 'l') {
+                        resultado.valor = (parserNumeros(local) & 0b001111) | (0b010000);
+                    } else if (aux[1] == 'h') {
+                        resultado.valor = (parserNumeros(local) & 0b001111) | (0b100000);
+                    } else {
+                        //CASOS DS, IP, CC, AC
+                        int i = 0;
+                        while (i < 10 && strcmp(aux, registers[i]) != 0) {
+                            i++;
+                        }
+                        if (i<10) {
+                            resultado.valor = (i & 0b001111);
+                        }
                     }
                 }
-            }
-        } else { //tenemos que buscar el rotulo al cual saltar
-            resultado.tipo=0;
-            int i = 0;
-            while (i<cantRotulos && strcmp(operando, rotulos[i].rotulo) != 0) {
-                i++;
-            }
-            if (i < cantRotulos){
-                resultado.valor = rotulos[i].nroLinea;
-            } else{
-                printf("[ERROR] Rotulo no encontrado: %s\n", operando);
-                resultado.valor = 0xFFFF;
+            } else { //tenemos que buscar el rotulo al cual saltar
+                resultado.tipo=0;
+                int i = 0;
+                while (i<cantRotulos && strcmp(operando, rotulos[i].rotulo) != 0) {
+                    i++;
+                }
+                if (i < cantRotulos){
+                    resultado.valor = rotulos[i].nroLinea;
+                } else{
+                    printf("[ERROR] Rotulo no encontrado: %s\n", operando);
+                    resultado.valor = 0xFFFF;
+                }
             }
         }
+
     } else { //OPERADOR INMEDIATO
         char aux[strlen(operando)];
         strcpy(aux, operando);
@@ -295,14 +323,14 @@ int calculaCS(char nombreArchivo[],
               TRotulo rotulos[],
               TEquNumber equs[],
               TEquString equsString[],
-              int *nRotulos, int *nEqus, int *nEquString,int *es, int *ss, int *ds){
+              int *nRotulos, int *nEqus, int *nEquString, int *es, int *ss, int *ds, int *csSinEqu){
     FILE * arch = fopen(nombreArchivo, "r+");
     char linea[200];
     int longitudCS = 0;
     int cantRotulos = 0;
-    int offset = 1;
+    int offset = 0;
 
-    *es = 1024; *ss = 1024; *ds = 1024;
+    *es = 1024; *ss = 1024; *ds = 1024; *csSinEqu = 0;
 
     if (arch != NULL) {
         while (fgets(linea,sizeof linea, arch)!=NULL) {
@@ -314,8 +342,10 @@ int calculaCS(char nombreArchivo[],
                 cantRotulos++;
             }
 
-            if (parsed[1])
+            if (parsed[1]) {
                 longitudCS++;
+                (*csSinEqu)++;
+            }
 
 
             if (parsed[5]){ //chequea las directivas
@@ -344,13 +374,13 @@ int calculaCS(char nombreArchivo[],
                     strcpy(equsString[*nEquString].nombre, nombre);
                     strcpy(equsString[*nEquString].valor, "");
 
-                    for (size_t i = 1; i < strlen(parsed[8])-1 ; i++){
+                    for (size_t i = 1; i < strlen(parsed[8]) - 1 ; i++){
                         equsString[*nEquString].valor[i-1] = parsed[8][i];
                     }
 
                     equsString[*nEquString].offset = offset;
-                    offset += strlen(parsed[8]) - 2; //no contamos las comillas
-                    longitudCS += strlen(parsed[8]) - 2;
+                    offset += strlen(equsString[*nEquString].valor) + 1; //tenemos que contar el caracter terminator
+                    longitudCS += strlen(parsed[8]) - 1;
                     (*nEquString)++;
                 }
             }
