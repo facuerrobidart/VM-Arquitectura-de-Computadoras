@@ -1,4 +1,1 @@
-palabra EQU "tibau"
-jere EQU "jere"
-mov [10], palabra
-mov [20], jere
+mov [eax], 5

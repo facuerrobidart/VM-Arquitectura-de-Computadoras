@@ -207,7 +207,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
         int k = 0;
         int i = 0; //recorremos entre corchetes
         while (i < sizeof(operando)) {
-            if (operando[i] != '[' && operando != ']') {
+            if (operando[i] != '[' && operando[i] != ']') {
                 aux[k] = operando[i];
                 k++;
             }
@@ -217,8 +217,8 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
         if (('a'<= aux[0] && aux[0] <= 'z') || ('A' <= aux[0] && aux[0] <= 'Z')) {//operando indirecto
                 size_t longitud = 0;
-                char op1[] = "";
-                char op2[] = "";
+                char op1[4] = "";
+                char op2[4] = "";
                 int idx = 0;
 
                 for(size_t l=0; l<strlen(aux); l++){
@@ -243,9 +243,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
                 resultado.tipo = 3; //OPERANDO INDIRECTO
 
-                if (sizeof(op1) == 3) {
-                    resultado.valor = parserNumeros(op1[1]) && 0x00F;
-                } else {
+                 if(strlen(op1)==2 ){
                     //CASOS DS, IP, CC, AC
                     int i = 0;
                     while (i < 10 && strcmp(aux, registers[i]) != 0) {
@@ -254,7 +252,12 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                     if (i<10) {
                         resultado.valor = (i & 0x00F);
                     }
+                }else {
+                    char opAux[3]="%";
+                    opAux[1]=op1[1];
+                    resultado.valor = parserNumeros(opAux) && 0x00F;
                 }
+
 
                 if (strcmp("", op2) != 0){ //implica la existencia de un offset
                     int encontreEq = 0;

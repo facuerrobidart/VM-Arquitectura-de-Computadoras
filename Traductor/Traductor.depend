@@ -65,3 +65,25 @@
 
 1652673337 c:\users\gamer\desktop\vm-arquitectura-de-computadoras\traductor\diccionario.h
 
+1652758413 source:c:\users\jere\desktop\vm-arquitectura-de-computadoras\traductor\main.c
+	<stdio.h>
+	<stdlib.h>
+	"string.h"
+	"parser.h"
+	"pattern.h"
+	<ctype.h>
+	<math.h>
+	"diccionario.h"
+
+1652756586 c:\users\jere\desktop\vm-arquitectura-de-computadoras\traductor\parser.h
+
+1652756586 c:\users\jere\desktop\vm-arquitectura-de-computadoras\traductor\pattern.h
+
+1652756585 c:\users\jere\desktop\vm-arquitectura-de-computadoras\traductor\diccionario.h
+
+1652756586 source:c:\users\jere\desktop\vm-arquitectura-de-computadoras\traductor\parser.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	"parser.h"
+
