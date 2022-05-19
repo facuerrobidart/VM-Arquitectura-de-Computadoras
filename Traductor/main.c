@@ -194,6 +194,20 @@ int equNumerico(char *simbolo, TEquNumber equsNumber[], int nEqusNumber, int *ex
 }
 
 
+
+int equString(char *simbolo, TEquString equsString[], int nEqusString, int *existeEqu){
+     int idx=0;
+      while (idx < nEqusString && !(*existeEqu)){
+        if (strcmp(simbolo, equsString[idx].nombre) == 0){ //si el operando estaba definido en un EQU, lo trato como un operando inmediato
+            *existeEqu = 1;
+            return equsString[idx].valor;
+        }
+        idx++;
+    }
+    return 0;
+
+}
+
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
 void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int cantRotulos,
                      TEquNumber equsNumber[], int nEqusNumber,
@@ -203,10 +217,10 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
     resultado.tipo = NULL;
 
     if (operando[0] == '[') { //OPERADOR DIRECTO
-        char aux[10] = "";
+        char aux[30] = "";
         int k = 0;
-        int i = 0; //recorremos entre corchetes
-        while (i < sizeof(operando)) {
+        size_t i = 0; //recorremos entre corchetes
+         while (i < strlen(operando)) {
             if (operando[i] != '[' && operando[i] != ']') {
                 aux[k] = operando[i];
                 k++;
@@ -218,7 +232,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
         if (('a'<= aux[0] && aux[0] <= 'z') || ('A' <= aux[0] && aux[0] <= 'Z')) {//operando indirecto
                 size_t longitud = 0;
                 char op1[4] = "";
-                char op2[4] = "";
+                char op2[11] = "";
                 int idx = 0;
 
                 for(size_t l=0; l<strlen(aux); l++){
@@ -230,15 +244,17 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                     op1[idx] = aux[longitud];
                     idx++; longitud++;
                 }
+
                 if (aux[longitud] == '+'){ //si es un signo positivo lo omito
                     longitud++;
                 }
 
-                idx = 0; //reseteo el idx para el segundo operador
+                int p=0;
 
-                while (longitud < sizeof(aux)){
-                    op2[idx] = aux[longitud];
-                    idx++; longitud++;
+
+                while (longitud < sizeof(aux) && aux[longitud]!= NULL){
+                    op2[p] = aux[longitud];
+                    p++; longitud++;
                 }
 
                 resultado.tipo = 3; //OPERANDO INDIRECTO
@@ -255,17 +271,27 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                 }else {
                     char opAux[3]="%";
                     opAux[1]=op1[1];
-                    resultado.valor = parserNumeros(opAux) && 0x00F;
+                    resultado.valor = parserNumeros(opAux);
                 }
 
 
                 if (strcmp("", op2) != 0){ //implica la existencia de un offset
                     int encontreEq = 0;
                     int res = equNumerico(op2, equsNumber, nEqusNumber, &encontreEq);
-                    if (!encontreEq) {
-                        resultado.valor = resultado.valor | (parserNumeros(op2) << 4 && 0xFF0);
-                    } else {
-                        resultado.valor = resultado.valor | (res << 4 && 0xFF0);
+                    if (encontreEq) {
+                        resultado.valor = (resultado.valor | (res << 4) );
+                    }
+                    else {
+                           res=equString(op2, equsString, nEqusString, &encontreEq);
+                           if (encontreEq) {
+                              resultado.valor = (resultado.valor | ( (res&0xFF) << 4));
+                          }
+                          else{
+                              int parseo=parserNumeros(op2);
+                              printf("%d\n",parseo);
+                              printf("%d\n",resultado.valor);
+                              resultado.valor = resultado.valor | (parserNumeros(op2) << 4 );
+                          }
                     }
                 }
 

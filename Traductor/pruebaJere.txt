@@ -1,1 +1,2 @@
-mov [eax], 5
+jere EQU "HOLA"
+mov [eax+jere], 5
