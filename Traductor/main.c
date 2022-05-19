@@ -12,7 +12,7 @@ int calculaCS(char nombreArchivo[],
               TRotulo rotulos[],
               TEquNumber equs[],
               TEquString equsString[],
-              int *nRotulos, int *nEqus, int *nEquString,int *es, int *ss, int *ds, int *csSinEqu);
+              int *nRotulos, int *nEqus, int *nEquString,int *es, int *ss, int *ds, int *csSinEqu,int *yaExiste);
 char *stringBinario(int num);
 
 int main(int argc, char *argv[])
@@ -33,13 +33,13 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     TRotulo rotulos[100];
     TEquNumber equsNumber[100];
     TEquString equsString[100];
-    int cantidadRotulos = 0, nEqusNumber = 0, nEqusString = 0, ss = 0, es = 0, ds = 0, csSinEqus = 0;
+    int cantidadRotulos = 0, nEqusNumber = 0, nEqusString = 0, ss = 0, es = 0, ds = 0, csSinEqus = 0,yaExisteEqu=0;
 
     if (!strstr(nombreOutput, ".mv1")) { //si no nos pasan la extension en los argumentos del programa
         strcat(nombreOutput, ".mv1"); //le agregamos la extension
     }
 
-    int longCS = calculaCS(nombreArchivo, rotulos, equsNumber, equsString, &cantidadRotulos, &nEqusNumber, &nEqusString, &es, &ss, &ds, &csSinEqus);
+    int longCS = calculaCS(nombreArchivo, rotulos, equsNumber, equsString, &cantidadRotulos, &nEqusNumber, &nEqusString, &es, &ss, &ds, &csSinEqus,&yaExisteEqu);
     FILE * output = fopen(nombreOutput, "w+");
 
     //HEADERS DEL BINARIO
@@ -68,9 +68,15 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
                 if (mostrar) {
                     printf("[%04d] %08X %s\n", nroLinea, instruccion, linea);
                 }
-                fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
+                if(yaExisteEqu){
+                        printf(" ");
+
+                }else{
+                   fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
+
+                }
                 nroLinea++;
-            } else {
+             } else {
                 if (!parsed[2] && !parsed[3]){
                     printf("%s\n", linea);
                 } else {
@@ -200,7 +206,7 @@ int equString(char *simbolo, TEquString equsString[], int nEqusString, int *exis
       while (idx < nEqusString && !(*existeEqu)){
         if (strcmp(simbolo, equsString[idx].nombre) == 0){ //si el operando estaba definido en un EQU, lo trato como un operando inmediato
             *existeEqu = 1;
-            return equsString[idx].valor;
+            return equsString[idx].offset;
         }
         idx++;
     }
@@ -284,7 +290,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                     else {
                            res=equString(op2, equsString, nEqusString, &encontreEq);
                            if (encontreEq) {
-                              resultado.valor = (resultado.valor | ( (res&0xFF) << 4));
+                              resultado.valor = (resultado.valor | ( ((csSinEqus+res)&0xFF) << 4));
                           }
                           else{
                               int parseo=parserNumeros(op2);
@@ -408,6 +414,26 @@ int parserNumeros(char num[]){
     }
 }
 
+
+int equRepetido(char *nombre,int TEquNumber equs[], TEquString equsString[], int *nEqus, int *nEquString){
+  int repetido=0;
+  int i=0;
+  while(!repetido && i<(*nEquString) ){
+    if(strcmp(nombre,equsString[i].nombre)==0){
+            repetido=1;
+    }
+    i++;
+   }
+    while(!repetido && i<(*nEqus) ){
+    if(strcmp(nombre,equs[i].nombre)==0){
+            repetido=1;
+    }
+    i++;
+   }
+    return repetido;
+}
+
+
 /*Devuelve la longitud del code segment, toma en cuenta las lineas
 que poseen mnemonico, ya sea valido o no ya que todos son traducidos igualmente
 Dado que es una longitud, el DS comienza en el valor de longitudCS. CONISDERAR, ademas,las posiciones del header*/
@@ -416,7 +442,7 @@ int calculaCS(char nombreArchivo[],
               TRotulo rotulos[],
               TEquNumber equs[],
               TEquString equsString[],
-              int *nRotulos, int *nEqus, int *nEquString, int *es, int *ss, int *ds, int *csSinEqu){
+              int *nRotulos, int *nEqus, int *nEquString, int *es, int *ss, int *ds, int *csSinEqu,int *yaExisteEqu){
     FILE * arch = fopen(nombreArchivo, "r+");
     char linea[200];
     int longitudCS = 0;
@@ -457,6 +483,11 @@ int calculaCS(char nombreArchivo[],
 
                 for(size_t l=0; l<strlen(nombre); l++){
                     nombre[l] = nombre[l] | 0x20; // convierto a minusculas caracter a caracter
+                }
+                *yaExisteEqu= equRepetido(nombre,equs,equsString,nEqus,nEquString);
+
+                if(*yaExisteEqu){
+                    printf("\n [ERROR] EQU repetido : %s \n",nombre);
                 }
 
                 if (parsed[8][0] != '"') { //si no es un string, el valor es un numero

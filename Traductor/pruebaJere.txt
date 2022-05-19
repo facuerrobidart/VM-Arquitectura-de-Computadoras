@@ -1,2 +1,5 @@
 jere EQU "HOLA"
+
+mov fx,100
+mov [100],5
 mov [eax+jere], 5
