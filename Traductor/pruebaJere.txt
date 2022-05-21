@@ -1,5 +1,10 @@
 jere EQU "HOLA"
+facundo EQU "fachi"
 
-mov fx,100
-mov [100],5
-mov [eax+jere], 5
+mov [1],2
+push [1]
+call chi
+smov fx,jere
+chi: mov [100],facundo
+mov eax,facundo
+ret

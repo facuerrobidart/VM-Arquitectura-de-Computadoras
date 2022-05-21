@@ -33,7 +33,7 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     TRotulo rotulos[100];
     TEquNumber equsNumber[100];
     TEquString equsString[100];
-    int cantidadRotulos = 0, nEqusNumber = 0, nEqusString = 0, ss = 0, es = 0, ds = 0, csSinEqus = 0,yaExisteEqu=0;
+    int cantidadRotulos = 0, nEqusNumber = 0, nEqusString = 0, ss = 0, es = 0, ds = 0, csSinEqus = 0,yaExisteEqu=0,borrar=0;
 
     if (!strstr(nombreOutput, ".mv1")) { //si no nos pasan la extension en los argumentos del programa
         strcat(nombreOutput, ".mv1"); //le agregamos la extension
@@ -60,21 +60,15 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
         char **parsed = parseline(linea);
         if (parsed) {
             if (parsed[1]) {
-                int traducido = traduceMnemonico(parsed[1]);
+                int traducido = traduceMnemonico(parsed[1],&borrar);
                 instruccion = generaInstruccion(traducido, parsed[2], parsed[3], rotulos, cantidadRotulos,
                                                 equsNumber, nEqusNumber,
                                                 equsString, nEqusString,
-                                                csSinEqus);
+                                                csSinEqus,&borrar);
                 if (mostrar) {
                     printf("[%04d] %08X %s\n", nroLinea, instruccion, linea);
                 }
-                if(yaExisteEqu){
-                        printf(" ");
-
-                }else{
-                   fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
-
-                }
+                fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(instruccion));
                 nroLinea++;
              } else {
                 if (!parsed[2] && !parsed[3]){
@@ -93,8 +87,9 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
         }
         fprintf(output, PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(0));
     }
-
-    fclose(output);
+     fclose(output);
+     if(yaExisteEqu || borrar)//si hay al menos un EQU repetido, no se genera archivo de salida
+        remove(nombreOutput);
 }
 
 int esRegistro(char registro[]){
@@ -117,7 +112,7 @@ definida en las constantes.
 Los índices de estas listas se corresponden con el código
 de cada mnemonico especificado en la tabla*/
 
-int traduceMnemonico(char instruccion[]){
+int traduceMnemonico(char instruccion[],int* borra){
     /*Pasamos a minusculas todas los mnemonicos
     para evitar errores de parseo por mayusculas y minusculas*/
     char aux[strlen(instruccion)];
@@ -126,21 +121,23 @@ int traduceMnemonico(char instruccion[]){
         aux[l] = aux[l] | 0x20; // convierto a minusculas caracter a caracter
     }
 
-    for(int i=0; i<12; i++){ //verifica si es de dos operandos
+    for(int i=0; i< 15; i++){ //verifica si es de dos operandos
         if (strcmp(aux,twoOp[i])==0){
             return i << 28;
         }
     }
-    for(int j=0; j<12; j++){ //verifica si es de un operando
+    for(int j=0; j<15; j++){ //verifica si es de un operando
         if (strcmp(aux,oneOp[j])== 0){
             return j << 24 | 0xF0000000;
         }
     }
-    for(int k=1; k<2; k++){ //verifica si es sin operandos
-        if (strcmp(aux, noOp[k-1])==0){
+    for(int k=0; k<2; k++){ //verifica si es sin operandos
+        if (strcmp(aux, noOp[k])==0){
             return k << 20 | 0xFF000000;
         }
     }
+     *borra=1;
+     printf("\n[ERROR] mnemonico desconocido: '%s'\n",aux);
     return 0xFFFFFFFF; // mnemonico inexistente
 }
 
@@ -148,13 +145,13 @@ int traduceMnemonico(char instruccion[]){
 int generaInstruccion(int codOp, char operando1[], char operando2[],
                       TRotulo rotulos[], int cantRotulos,
                       TEquNumber equsNumber[], int nEqusNumber,
-                      TEquString equsString[], int nEqusString, int csSinEqus){
+                      TEquString equsString[], int nEqusString, int csSinEqus,int *borrar){
     Toperando res1;
     Toperando res2;
     int instruccion = 0x00000000;
     if ((codOp & 0xF0000000) != 0xF0000000) { //operador con dos operandos
-        traduceOperando(operando1, &res1, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus);
-        traduceOperando(operando2, &res2, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus);
+        traduceOperando(operando1, &res1, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus,borrar);
+        traduceOperando(operando2, &res2, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus,borrar);
         //seteo instruccion
         instruccion = (codOp & 0xF0000000);
         //seteo tipo operando
@@ -170,7 +167,7 @@ int generaInstruccion(int codOp, char operando1[], char operando2[],
         instruccion = instruccion | ((res1.valor << 12) & 0x00FFF000);
         instruccion = instruccion | ((res2.valor) & 0x00000FFF);
     } else if ((codOp & 0xFF000000) != 0xFF000000){ //operador con un operando
-        traduceOperando(operando1, &res1, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus);
+        traduceOperando(operando1, &res1, rotulos, cantRotulos, equsNumber, nEqusNumber, equsString, nEqusString, csSinEqus,borrar);
         //seteo instruccion
         instruccion = (codOp & 0xFF000000);
         //seteo tipo operando
@@ -217,7 +214,7 @@ int equString(char *simbolo, TEquString equsString[], int nEqusString, int *exis
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
 void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int cantRotulos,
                      TEquNumber equsNumber[], int nEqusNumber,
-                     TEquString equsString[], int nEqusString, int csSinEqus){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
+                     TEquString equsString[], int nEqusString, int csSinEqus,int *borrar){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
     Toperando resultado = *input;
     resultado.valor = -100;
     resultado.tipo = NULL;
@@ -292,12 +289,15 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                            if (encontreEq) {
                               resultado.valor = (resultado.valor | ( ((csSinEqus+res)&0xFF) << 4));
                           }
-                          else{
-                              int parseo=parserNumeros(op2);
-                              printf("%d\n",parseo);
-                              printf("%d\n",resultado.valor);
-                              resultado.valor = resultado.valor | (parserNumeros(op2) << 4 );
-                          }
+                          else if (('a'<= op2[0] && op2[0] <= 'z')){
+                               printf("\n[ERROR] simbolo inexistente : '%s'\n",op2);
+                           } else {//si es un numero
+                                int parseo=parserNumeros(op2);
+                                printf("%d\n",parseo);
+                                printf("%d\n",resultado.valor);
+                                resultado.valor = resultado.valor | (parserNumeros(op2) << 4 );
+                           }
+
                     }
                 }
 
@@ -369,11 +369,13 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                 if (i < cantRotulos){
                     resultado.valor = rotulos[i].nroLinea;
                 } else{
-                    printf("[ERROR] Rotulo no encontrado: %s\n", operando);
-                    resultado.valor = 0xFFFF;
+                    printf("[ERROR] simbolo no encontrado: %s\n", operando);//contempla tanto el caso de rotulos como de EQU
+                    *borrar=1;
+
                 }
             }
         }
+
 
     } else { //OPERADOR INMEDIATO
         char aux[strlen(operando)];
@@ -384,6 +386,8 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
     *input = resultado;
 }
+
+
 
 /* la idea es recibir un número en formato string
 y convertirlo a decimal int basados en la especificación de la MV */
@@ -415,7 +419,7 @@ int parserNumeros(char num[]){
 }
 
 
-int equRepetido(char *nombre,int TEquNumber equs[], TEquString equsString[], int *nEqus, int *nEquString){
+int equRepetido(char *nombre,TEquNumber equs[], TEquString equsString[], int *nEqus, int *nEquString){
   int repetido=0;
   int i=0;
   while(!repetido && i<(*nEquString) ){

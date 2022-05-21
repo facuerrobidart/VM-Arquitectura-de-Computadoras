@@ -1,1 +1,1 @@
-mov [eax+jere], 5
+ret

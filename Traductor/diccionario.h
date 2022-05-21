@@ -4,12 +4,12 @@ Estan separados por su cantidad de operandos.*/
 const char *twoOp[] = {
     "mov","add","sub",
     "swap","mul","div","cmp",
-    "shl","shr","and","or","xor"};
+    "shl","shr","and","or","xor","slen","smov","scmp"};
 const char *oneOp[] = {
     "sys","jmp","jz","jp","jn",
     "jnz","jnp","jnn","ldl",
-    "ldh","rnd","not"};
-const char *noOp[] = {"stop"};
+    "ldh","rnd","not","push","pop","call"};
+const char *noOp[] = {"ret","stop"};
 
 const char *registers[] = {
     "ds", "", "", "", "",
