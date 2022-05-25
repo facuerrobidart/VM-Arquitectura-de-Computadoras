@@ -223,12 +223,27 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
         char aux[30] = "";
         int k = 0;
         size_t i = 0; //recorremos entre corchetes
-         while (i < strlen(operando)) {
+
+        while (i < strlen(operando)) {
             if (operando[i] != '[' && operando[i] != ']') {
                 aux[k] = operando[i];
                 k++;
             }
             i++;
+        }
+
+        int findEqu = 0;
+
+        int res = equNumerico(aux, equsNumber, nEqusNumber, &findEqu);
+        resultado.tipo = 2;
+        if (findEqu) {
+            resultado.valor = res;
+        }
+        else {
+            res=equString(aux, equsString, nEqusString, &findEqu);
+            if (findEqu) {
+              resultado.valor = (csSinEqus+res) & 0xFF;
+            }
         }
 
 
@@ -285,22 +300,19 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         resultado.valor = (resultado.valor | (res << 4) );
                     }
                     else {
-                           res=equString(op2, equsString, nEqusString, &encontreEq);
-                           if (encontreEq) {
-                              resultado.valor = (resultado.valor | ( ((csSinEqus+res)&0xFF) << 4));
-                          }
-                          else if (('a'<= op2[0] && op2[0] <= 'z')){
-                               printf("\n[ERROR] simbolo inexistente : '%s'\n",op2);
-                           } else {//si es un numero
-                                int parseo=parserNumeros(op2);
-                                printf("%d\n",parseo);
-                                printf("%d\n",resultado.valor);
-                                resultado.valor = resultado.valor | (parserNumeros(op2) << 4 );
-                           }
-
+                        res=equString(op2, equsString, nEqusString, &encontreEq);
+                        if (encontreEq) {
+                          resultado.valor = (resultado.valor | ( ((csSinEqus+res)&0xFF) << 4));
+                        } else if (('a'<= op2[0] && op2[0] <= 'z')){
+                           printf("\n[ERROR] simbolo inexistente : '%s'\n",op2);
+                        } else {//si es un numero
+                            int parseo=parserNumeros(op2);
+                            printf("%d\n",parseo);
+                            printf("%d\n",resultado.valor);
+                            resultado.valor = resultado.valor | (parserNumeros(op2) << 4 );
+                        }
                     }
                 }
-
         } else {
             resultado.tipo=2;
             resultado.valor=parserNumeros(aux);
