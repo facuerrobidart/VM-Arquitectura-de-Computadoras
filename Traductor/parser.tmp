@@ -1,1 +1,1 @@
-ret
+add [eax+jere],[efx+jere]

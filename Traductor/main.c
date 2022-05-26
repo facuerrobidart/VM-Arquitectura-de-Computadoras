@@ -35,8 +35,8 @@ void leerArchivo(char nombreArchivo[], char nombreOutput[], int mostrar){
     TEquString equsString[100];
     int cantidadRotulos = 0, nEqusNumber = 0, nEqusString = 0, ss = 0, es = 0, ds = 0, csSinEqus = 0,yaExisteEqu=0,borrar=0;
 
-    if (!strstr(nombreOutput, ".mv1")) { //si no nos pasan la extension en los argumentos del programa
-        strcat(nombreOutput, ".mv1"); //le agregamos la extension
+    if (!strstr(nombreOutput, ".mv2")) { //si no nos pasan la extension en los argumentos del programa
+        strcat(nombreOutput, ".mv2"); //le agregamos la extension
     }
 
     int longCS = calculaCS(nombreArchivo, rotulos, equsNumber, equsString, &cantidadRotulos, &nEqusNumber, &nEqusString, &es, &ss, &ds, &csSinEqus,&yaExisteEqu);
@@ -232,20 +232,6 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
             i++;
         }
 
-        int findEqu = 0;
-
-        int res = equNumerico(aux, equsNumber, nEqusNumber, &findEqu);
-        resultado.tipo = 2;
-        if (findEqu) {
-            resultado.valor = res;
-        }
-        else {
-            res=equString(aux, equsString, nEqusString, &findEqu);
-            if (findEqu) {
-              resultado.valor = (csSinEqus+res) & 0xFF;
-            }
-        }
-
 
         if (('a'<= aux[0] && aux[0] <= 'z') || ('A' <= aux[0] && aux[0] <= 'Z')) {//operando indirecto
                 size_t longitud = 0;
@@ -313,11 +299,25 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         }
                     }
                 }
-        } else {
+                else{
+                      int findEqu = 0;
+                      int res = equNumerico(op1, equsNumber, nEqusNumber, &findEqu);
+                      resultado.tipo = 2;
+                      if (findEqu) {
+                        resultado.valor = res;
+                      }
+                      else {
+                        res=equString(op1, equsString, nEqusString, &findEqu);
+                        if (findEqu) {
+                            resultado.valor = (csSinEqus+res) & 0xFF;
+                        }
+                      }
+                }
+        } else {//
             resultado.tipo=2;
             resultado.valor=parserNumeros(aux);
         }
-    } else if (('a'<=operando[0] && operando[0]<='z') || ('A'<=operando[0] && operando[0]<='Z')) {
+    } else if (('a'<=operando[0] && operando[0]<='z') || ('A'<=operando[0] && operando[0]<='Z')) {//CASO REGISTROS
         int encontreEqu = 0;
         char aux[strlen(operando)];
         int idx = 0;
