@@ -1,1 +1,1 @@
-mov [eax],3
+stop

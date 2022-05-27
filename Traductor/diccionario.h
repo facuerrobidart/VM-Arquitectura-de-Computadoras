@@ -12,8 +12,8 @@ const char *oneOp[] = {
 const char *noOp[] = {"ret","stop"};
 
 const char *registers[] = {
-    "ds", "", "", "", "",
-    "ip", "", "", "cc", "ac"
+    "ds", "ss", "es", "cs", "hp",
+    "ip", "sp", "bp", "cc", "ac"
 };
 const char *standardRegisters[] = {
     "eax","ebx","ecx","edx","eex","efx",

@@ -1,7 +1,12 @@
-jere EQU 2
+str equ "Hola"
 
-ldl 10
-ldh 3
-mov eax,5
-mov [ac],1200
-mov [eax],3
+mov eax, 10
+mov ebx, 2
+mov [eax+str], 2
+mul [eax+str], ebx
+mov [str],[eax+str]
+mov edx, str
+mov ecx, 1
+mov eax, %001
+sys 2
+stop

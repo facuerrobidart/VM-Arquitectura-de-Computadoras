@@ -291,6 +291,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         res=equString(op2, equsString, nEqusString, &encontreEq);
                         if (encontreEq) {
                           resultado.valor = (resultado.valor | ( ((csSinEqus+res)&0xFF) << 4));
+                          resultado.tipo=0;
                         } else if (('a'<= op2[0] && op2[0] <= 'z')){
                            printf("\n[ERROR] simbolo inexistente : '%s'\n",op2);
                         } else {//si es un numero
@@ -301,7 +302,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         }
                     }
                 }
-                else{
+                else{//caso [EQU]
                       int findEqu = 0;
                       int res = equNumerico(op1, equsNumber, nEqusNumber, &findEqu);
 
@@ -313,7 +314,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
                            res=equString(op1, equsString, nEqusString, &findEqu);
                            if (findEqu) {
-                             resultado.tipo = 2;
+                             resultado.tipo = 0;//marco el string como inmediato
                              resultado.valor = (csSinEqus+res) & 0xFF;
                            }
                       }
@@ -342,7 +343,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
         idx = 0;
         while (idx < nEqusString && !encontreEqu) {
             if (strcmp(aux, equsString[idx].nombre) == 0){
-                resultado.tipo = 2; //OPERANDO DIRECTO a la posicion del 1er caracter en el CS
+                resultado.tipo = 0; //OPERANDO DIRECTO a la posicion del 1er caracter en el CS
                 resultado.valor = csSinEqus + equsString[idx].offset;
                 encontreEqu = 1;
             }
