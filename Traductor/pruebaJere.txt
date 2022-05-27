@@ -1,6 +1,7 @@
 jere EQU 2
 
+ldl 10
+ldh 3
 mov eax,5
-mov efx,30
-mov [eax+jere],3
-add [eax+jere],[efx+jere]
+mov [ac],1200
+mov [eax],3

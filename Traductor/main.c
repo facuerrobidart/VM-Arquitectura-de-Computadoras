@@ -219,6 +219,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
     resultado.valor = -100;
     resultado.tipo = NULL;
 
+
     if (operando[0] == '[') { //OPERADOR DIRECTO
         char aux[30] = "";
         int k = 0;
@@ -265,12 +266,13 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
                  if(strlen(op1)==2 ){
                     //CASOS DS, IP, CC, AC
-                    int i = 0;
-                    while (i < 10 && strcmp(aux, registers[i]) != 0) {
-                        i++;
+                    int indice = 0;
+
+                    while (indice < 10 && strcmp(op1, registers[indice]) != 0) {
+                        indice++;
                     }
-                    if (i<10) {
-                        resultado.valor = (i & 0x00F);
+                    if (indice<10) {
+                        resultado.valor = (indice & 0x00F);
                     }
                 }else {
                     char opAux[3]="%";
@@ -302,15 +304,18 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                 else{
                       int findEqu = 0;
                       int res = equNumerico(op1, equsNumber, nEqusNumber, &findEqu);
-                      resultado.tipo = 2;
+
                       if (findEqu) {
-                        resultado.valor = res;
+                          resultado.tipo = 2;
+                          resultado.valor = res;
                       }
                       else {
-                        res=equString(op1, equsString, nEqusString, &findEqu);
-                        if (findEqu) {
-                            resultado.valor = (csSinEqus+res) & 0xFF;
-                        }
+
+                           res=equString(op1, equsString, nEqusString, &findEqu);
+                           if (findEqu) {
+                             resultado.tipo = 2;
+                             resultado.valor = (csSinEqus+res) & 0xFF;
+                           }
                       }
                 }
         } else {//

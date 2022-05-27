@@ -1,1 +1,1 @@
-add [eax+jere],[efx+jere]
+mov [eax],3
