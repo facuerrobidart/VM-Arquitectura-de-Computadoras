@@ -203,7 +203,7 @@ int equString(char *simbolo, TEquString equsString[], int nEqusString, int *exis
       while (idx < nEqusString && !(*existeEqu)){
         if (strcmp(simbolo, equsString[idx].nombre) == 0){ //si el operando estaba definido en un EQU, lo trato como un operando inmediato
             *existeEqu = 1;
-            return equsString[idx].offset;
+             return equsString[idx].offset;
         }
         idx++;
     }
@@ -214,13 +214,14 @@ int equString(char *simbolo, TEquString equsString[], int nEqusString, int *exis
 /*esta funcion determina el tipo de operando y devuelve el numero convertido*/
 void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int cantRotulos,
                      TEquNumber equsNumber[], int nEqusNumber,
-                     TEquString equsString[], int nEqusString, int csSinEqus,int *borrar){ //LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
+                     TEquString equsString[], int nEqusString, int csSinEqus,int *borrar){ ///LOS OPERANDOS SE CONVIERTEN DE UNO EN UNO
+
     Toperando resultado = *input;
     resultado.valor = -100;
     resultado.tipo = NULL;
 
 
-    if (operando[0] == '[') { //OPERADOR DIRECTO
+    if (operando[0] == '[') { ///OPERADOR DIRECTO
         char aux[30] = "";
         int k = 0;
         size_t i = 0; //recorremos entre corchetes
@@ -233,8 +234,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
             i++;
         }
 
-
-        if (('a'<= aux[0] && aux[0] <= 'z') || ('A' <= aux[0] && aux[0] <= 'Z')) {//operando indirecto
+        if (('a'<= aux[0] && aux[0] <= 'z') || ('A' <= aux[0] && aux[0] <= 'Z')) {///OPERANDO INDIRECTO
                 size_t longitud = 0;
                 char op1[4] = "";
                 char op2[11] = "";
@@ -291,7 +291,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         res=equString(op2, equsString, nEqusString, &encontreEq);
                         if (encontreEq) {
                           resultado.valor = (resultado.valor | ( ((csSinEqus+res)&0xFF) << 4));
-                          resultado.tipo=0;
+                          resultado.tipo=3;
                         } else if (('a'<= op2[0] && op2[0] <= 'z')){
                            printf("\n[ERROR] simbolo inexistente : '%s'\n",op2);
                         } else {//si es un numero
@@ -314,12 +314,12 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
                            res=equString(op1, equsString, nEqusString, &findEqu);
                            if (findEqu) {
-                             resultado.tipo = 0;//marco el string como inmediato
+                             resultado.tipo = 2;//marco el string como inmediato
                              resultado.valor = (csSinEqus+res) & 0xFF;
                            }
                       }
                 }
-        } else {//
+        } else {
             resultado.tipo=2;
             resultado.valor=parserNumeros(aux);
         }
@@ -338,12 +338,17 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
         if (encontreEqu) {
             resultado.tipo = 0;
             resultado.valor = valor;
+        }else{
+            valor = equString(aux, equsString, nEqusString, &encontreEqu);///FACU FIJATE QUE ACA ES DONDE DA RARO. DEBERIA DEVOLVER 10 Y DEVUELVE 0
+            if (encontreEqu) {
+                resultado.tipo = 0;
+                resultado.valor = valor;
+            }
         }
-
         idx = 0;
         while (idx < nEqusString && !encontreEqu) {
             if (strcmp(aux, equsString[idx].nombre) == 0){
-                resultado.tipo = 0; //OPERANDO DIRECTO a la posicion del 1er caracter en el CS
+                resultado.tipo = 2; //OPERANDO DIRECTO a la posicion del 1er caracter en el CS
                 resultado.valor = csSinEqus + equsString[idx].offset;
                 encontreEqu = 1;
             }
@@ -352,7 +357,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
         if (!encontreEqu) {
             resultado.tipo = 1;
-            if (esRegistro(aux)) { //OPERADOR DE REGISTRO
+            if (esRegistro(aux)) { ///OPERADOR DE REGISTRO
                 if (strlen(aux) == 3){ //REGISTRO EXTENDIDO
                     char local[3] = "%";
                     local[1] = aux[1];
@@ -378,7 +383,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         }
                     }
                 }
-            } else { //tenemos que buscar el rotulo al cual saltar
+            } else { ///tenemos que buscar el rotulo al cual saltar
                 resultado.tipo=0;
                 int i = 0;
                 while (i<cantRotulos && strcmp(operando, rotulos[i].rotulo) != 0) {
@@ -395,7 +400,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
         }
 
 
-    } else { //OPERADOR INMEDIATO
+    } else { ///OPERADOR INMEDIATO
         char aux[strlen(operando)];
         strcpy(aux, operando);
         resultado.tipo = 0;
@@ -525,6 +530,7 @@ int calculaCS(char nombreArchivo[],
                     }
 
                     equsString[*nEquString].offset = offset;
+                    printf(" %d      ",equsString[*nEquString].offset);
                     offset += strlen(equsString[*nEquString].valor) + 1; //tenemos que contar el caracter terminator
                     longitudCS += strlen(parsed[8]) - 1;
                     (*nEquString)++;
