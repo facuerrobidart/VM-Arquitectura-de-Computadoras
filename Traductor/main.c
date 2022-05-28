@@ -200,7 +200,7 @@ int equNumerico(char *simbolo, TEquNumber equsNumber[], int nEqusNumber, int *ex
 
 int equString(char *simbolo, TEquString equsString[], int nEqusString, int *existeEqu){
      int idx=0;
-      while (idx < nEqusString && !(*existeEqu)){
+    while (idx < nEqusString && !(*existeEqu)){
         if (strcmp(simbolo, equsString[idx].nombre) == 0){ //si el operando estaba definido en un EQU, lo trato como un operando inmediato
             *existeEqu = 1;
              return equsString[idx].offset;
@@ -296,8 +296,8 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                            printf("\n[ERROR] simbolo inexistente : '%s'\n",op2);
                         } else {//si es un numero
                             int parseo=parserNumeros(op2);
-                            printf("%d\n",parseo);
-                            printf("%d\n",resultado.valor);
+                            //printf("%d\n",parseo);
+                            //printf("%d\n",resultado.valor);
                             resultado.valor = resultado.valor | (parserNumeros(op2) << 4 );
                         }
                     }
@@ -339,10 +339,11 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
             resultado.tipo = 0;
             resultado.valor = valor;
         }else{
-            valor = equString(aux, equsString, nEqusString, &encontreEqu);///FACU FIJATE QUE ACA ES DONDE DA RARO. DEBERIA DEVOLVER 10 Y DEVUELVE 0
+            valor = equString(aux, equsString, nEqusString, &encontreEqu);///FACU FIJATE QUE ACA ES DONDE DA RARO. DEBERIA DEVOLVER 10 Y DEVUELVE
             if (encontreEqu) {
                 resultado.tipo = 0;
-                resultado.valor = valor;
+                resultado.valor = csSinEqus + valor;
+                //printf("%d\n", resultado.valor);
             }
         }
         idx = 0;
@@ -530,7 +531,7 @@ int calculaCS(char nombreArchivo[],
                     }
 
                     equsString[*nEquString].offset = offset;
-                    printf(" %d      ",equsString[*nEquString].offset);
+                    //printf(" %d      ",equsString[*nEquString].offset);
                     offset += strlen(equsString[*nEquString].valor) + 1; //tenemos que contar el caracter terminator
                     longitudCS += strlen(parsed[8]) - 1;
                     (*nEquString)++;
