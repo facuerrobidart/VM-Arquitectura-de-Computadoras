@@ -311,11 +311,10 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                           resultado.valor = res;
                       }
                       else {
-
                            res=equString(op1, equsString, nEqusString, &findEqu);
                            if (findEqu) {
-                             resultado.tipo = 2;//marco el string como inmediato
-                             resultado.valor = (csSinEqus+res) & 0xFF;
+                             resultado.tipo = 0;//marco el string como indirecto
+                             resultado.valor = ((csSinEqus+res) & 0xFF);
                            }
                       }
                 }
@@ -339,10 +338,10 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
             resultado.tipo = 0;
             resultado.valor = valor;
         }else{
-            valor = equString(aux, equsString, nEqusString, &encontreEqu);///FACU FIJATE QUE ACA ES DONDE DA RARO. DEBERIA DEVOLVER 10 Y DEVUELVE
+            valor = equString(aux, equsString, nEqusString, &encontreEqu);
             if (encontreEqu) {
-                resultado.tipo = 0;
-                resultado.valor = csSinEqus + valor;
+                resultado.tipo = 3;
+                resultado.valor = ((0x3 << 8) | (csSinEqus+valor) & 0xFF);
                 //printf("%d\n", resultado.valor);
             }
         }
