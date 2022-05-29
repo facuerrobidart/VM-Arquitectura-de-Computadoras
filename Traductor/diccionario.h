@@ -19,7 +19,7 @@ const char *standardRegisters[] = {
     "eax","ebx","ecx","edx","eex","efx",
     "ax","bx","cx","dx","ex","fx",
     "al","bl","cl","dl","el","fl",
-    "ah","bh","ch","ch","eh","fh"
+    "ah","bh","ch","dh","eh","fh"
 };
 
 typedef struct Toperando {
