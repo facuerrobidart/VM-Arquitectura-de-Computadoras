@@ -1,9 +1,7 @@
-str equ "Hola"
-
-mov eax, 10
+label: mov eax, 10
 mov ebx, 2
 mov [eax+str], 2
-mul [eax+str], ebx
+label: mul [eax+str], ebx
 mov [str],[eax+str]
 mov edx, str
 mov ecx, 1

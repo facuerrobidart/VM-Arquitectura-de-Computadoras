@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-/*ATENCIÃ“N: C maneja los int automÃ¡ticamente,
+/*ATENCIÓN: C maneja los int automáticamente,
 solamente hay que tener cuidado de poner el formato
 adecuado cuando se hace printf y scanf*/
 
@@ -109,7 +109,7 @@ int esRegistro(char registro[]){
 /*Esta funcion traduce los mnemonicos de char a binario
 Recibe un mnemonico y compara contra la lista de mnemonicos
 definida en las constantes.
-Los Ã­ndices de estas listas se corresponden con el cÃ³digo
+Los índices de estas listas se corresponden con el código
 de cada mnemonico especificado en la tabla*/
 
 int traduceMnemonico(char instruccion[],int* borra){
@@ -363,7 +363,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                     char local[3] = "%";
                     local[1] = aux[1];
 
-                    resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos seÃ±alan el subregistro seleccionado
+                    resultado.valor = (parserNumeros(local) & 0b001111); //los dos bits mas significativos señalan el subregistro seleccionado
                 } else {
                     char local[3] = "%";
                     local[1] = aux[0]; //el registro se referencia con el primer caracter si no es extendido
@@ -413,8 +413,8 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
 
 
 
-/* la idea es recibir un nÃºmero en formato string
-y convertirlo a decimal int basados en la especificaciÃ³n de la MV */
+/* la idea es recibir un número en formato string
+y convertirlo a decimal int basados en la especificación de la MV */
 int parserNumeros(char num[]){
     char aux[100]= "";
     int k = 0;
@@ -443,22 +443,32 @@ int parserNumeros(char num[]){
 }
 
 
-int equRepetido(char *nombre,TEquNumber equs[], TEquString equsString[], int *nEqus, int *nEquString){
-  int repetido=0;
+void simboloRepetido(char *nombre,TEquNumber equs[], TEquString equsString[], TRotulo rotulos[],int nEqus, int nEquString, int nRotulos, int *resultado){
   int i=0;
-  while(!repetido && i<(*nEquString) ){
+
+  while(!(*resultado) && i<nEquString){
     if(strcmp(nombre,equsString[i].nombre)==0){
-            repetido=1;
+      *resultado = 1;
     }
     i++;
-   }
-    while(!repetido && i<(*nEqus) ){
+  }
+
+  i=0;
+
+  while(!(*resultado) && i<nEqus){
     if(strcmp(nombre,equs[i].nombre)==0){
-            repetido=1;
+      *resultado = 1;
     }
     i++;
-   }
-    return repetido;
+  }
+
+  i=0;
+
+  while (!(*resultado) && i < nRotulos){
+    if (strcmp(nombre, rotulos[i].rotulo) == 0){
+      *resultado = 1;
+    }
+  }
 }
 
 
@@ -483,7 +493,12 @@ int calculaCS(char nombreArchivo[],
         while (fgets(linea,sizeof linea, arch)!=NULL) {
 
             char **parsed = parseline(linea);
-            if (parsed[0]){ //cheqquea rotulo
+            if (parsed[0]){ //chequea rotulo
+                simboloRepetido(parsed[0],equs,equsString,rotulos, *nEqus, *nEquString, cantRotulos, yaExisteEqu);
+                if(*yaExisteEqu){
+                    printf("\n [ERROR] Simbolo repetido : %s \n", parsed[0]);
+                }
+
                 strcpy(rotulos[cantRotulos].rotulo, parsed[0]);
                 rotulos[cantRotulos].nroLinea = longitudCS;
                 cantRotulos++;
@@ -512,10 +527,10 @@ int calculaCS(char nombreArchivo[],
                 for(size_t l=0; l<strlen(nombre); l++){
                     nombre[l] = nombre[l] | 0x20; // convierto a minusculas caracter a caracter
                 }
-                *yaExisteEqu= equRepetido(nombre,equs,equsString,nEqus,nEquString);
+                simboloRepetido(nombre,equs,equsString,rotulos, *nEqus, *nEquString, cantRotulos, yaExisteEqu);
 
                 if(*yaExisteEqu){
-                    printf("\n [ERROR] EQU repetido : %s \n",nombre);
+                    printf("\n [ERROR] Simbolo repetido : %s \n",nombre);
                 }
 
                 if (parsed[8][0] != '"') { //si no es un string, el valor es un numero
