@@ -468,6 +468,7 @@ void simboloRepetido(char *nombre,TEquNumber equs[], TEquString equsString[], TR
     if (strcmp(nombre, rotulos[i].rotulo) == 0){
       *resultado = 1;
     }
+    i++;
   }
 }
 
