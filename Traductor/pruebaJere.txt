@@ -6,7 +6,7 @@ DISK_D EQU 1
 MSG_SECTOR EQU "Ingrese el sector inicial: "
 MSG_COUNT EQU "Ingrese la cantidad de sectores: "
 
-MSG_SUCCESS EQU "Disco clonado con exito!"
+MSG_SUCCES EQU "Disco clonado con exito!"
 MSG_ERROR EQU "Error de clonacion!"
 
           LDH 3
@@ -85,7 +85,7 @@ MSG_ERROR EQU "Error de clonacion!"
           JNZ ERROR
 
           LDH 3
-          LDL MSG_SUCCESS
+          LDL MSG_SUCCES
           MOV EDX, AC
           MOV AX, %800
           SYS %4
