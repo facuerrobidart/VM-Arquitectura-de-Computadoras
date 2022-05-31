@@ -501,7 +501,7 @@ int calculaCS(char nombreArchivo[],
                 }
 
                 strcpy(rotulos[cantRotulos].rotulo, parsed[0]);
-                rotulos[cantRotulos].nroLinea = longitudCS;
+                rotulos[cantRotulos].nroLinea = (*csSinEqu);
                 cantRotulos++;
             }
 
