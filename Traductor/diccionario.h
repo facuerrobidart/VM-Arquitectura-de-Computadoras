@@ -33,12 +33,12 @@ typedef struct TRotulo {
 } TRotulo;
 
 typedef struct TEquNumber {
-    char nombre[11];
+    char nombre[20];
     int valor;
 } TEquNumber;
 
 typedef struct TEquString {
     char nombre[11];
-    char valor[30];
+    char valor[100];
     int offset;
 } TEquString;
