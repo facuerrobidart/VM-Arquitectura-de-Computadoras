@@ -219,6 +219,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
     Toperando resultado = *input;
     resultado.valor = -100;
     resultado.tipo = NULL;
+    int offsetNegativo = 0;
 
 
     if (operando[0] == '[') { ///OPERADOR DIRECTO
@@ -245,13 +246,16 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         aux[l] = aux[l] | 0x20; // convierto a minusculas caracter a caracter
                 }
 
-                while (longitud < sizeof(aux) && aux[longitud] != '+' && aux[longitud] != '-'  ){
+                while (longitud < strlen(aux) && aux[longitud] != '+' && aux[longitud] != '-'  ){
                     op1[idx] = aux[longitud];
                     idx++; longitud++;
                 }
 
-                if (aux[longitud] == '+'){ //si es un signo positivo lo omito
-                    longitud++;
+                if (aux[longitud] == '+' || aux[longitud] == '-'){ //si es un signo positivo lo omito
+                    if(aux[longitud] == '-')
+                        offsetNegativo=1;
+                   // if(aux[longitud]=='+')
+                        longitud++;
                 }
 
                 int p=0;
@@ -279,11 +283,12 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                     opAux[1]=op1[1];
                     resultado.valor = parserNumeros(opAux);
                 }
-
-
                 if (strcmp("", op2) != 0){ //implica la existencia de un offset
                     int encontreEq = 0;
                     int res = equNumerico(op2, equsNumber, nEqusNumber, &encontreEq);
+                    if(offsetNegativo)
+                        res*=(-1);
+                    int preVal;
                     if (encontreEq) {
                         resultado.valor = (resultado.valor | (res << 4) );
                     }
@@ -298,7 +303,9 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                             int parseo=parserNumeros(op2);
                             //printf("%d\n",parseo);
                             //printf("%d\n",resultado.valor);
-                            resultado.valor = resultado.valor | (parserNumeros(op2) << 4 );
+                            if(offsetNegativo)
+                               parseo*=(-1);
+                            resultado.valor = resultado.valor | (parseo << 4 );
                         }
                     }
                 }
