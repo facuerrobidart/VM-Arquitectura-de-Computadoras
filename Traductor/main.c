@@ -158,10 +158,10 @@ int generaInstruccion(int codOp, char operando1[], char operando2[],
         instruccion = instruccion | ((res1.tipo << 26) & 0b00001100000000000000000000000000);
         instruccion = instruccion | ((res2.tipo << 24) & 0b00000011000000000000000000000000);
         //seteo valores de operando
-        if (res1.valor > pow(2,12)){
+        if (abs(res1.valor) > pow(2,11)){
             printf("[WARNING] Operando 1 truncado\n");
         }
-        if (res2.valor > pow(2,12)){
+        if (abs(res2.valor) > pow(2,11)){
             printf("[WARNING] Operando 2 truncado\n");
         }
         instruccion = instruccion | ((res1.valor << 12) & 0x00FFF000);
@@ -173,7 +173,7 @@ int generaInstruccion(int codOp, char operando1[], char operando2[],
         //seteo tipo operando
         instruccion = instruccion | ((res1.tipo << 22) & 0b00000000110000000000000000000000);
         //seteo valor de operando
-        if (res1.valor > pow(2,16)){
+        if (abs(res1.valor) > pow(2,15)){
             printf("[WARNING] Operando Truncado\n");
         }
         instruccion = instruccion | ((res1.valor) & 0x0000FFFF);
@@ -291,7 +291,7 @@ void traduceOperando(char operando[], Toperando *input, TRotulo rotulos[], int c
                         res=equString(op2, equsString, nEqusString, &encontreEq);
                         if (encontreEq) {
                           resultado.valor = (resultado.valor | ( ((csSinEqus+res)&0xFF) << 4));
-                          resultado.tipo=3;
+                          //resultado.tipo=3;
                         } else if (('a'<= op2[0] && op2[0] <= 'z')){
                            printf("\n[ERROR] simbolo inexistente : '%s'\n",op2);
                         } else {//si es un numero
